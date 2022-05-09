@@ -39,7 +39,7 @@ class Graph:
     def nodes(self):
         return self.__adjacency_lists.keys()
 
-    def getNeighbours(self, node):
+    def getNeighbours(self, node, **kwargs):
         return set(self.__adjacency_lists[node].keys())
 
     def __getitem__(self, item):
@@ -93,7 +93,7 @@ class GridGraph(Graph):
         self.length = kwargs.get("length", BuildArea().length)
         self.__cost = kwargs.get("cost", manhattan)
 
-    def getNeighbours(self, node):
+    def getNeighbours(self, node, **kwargs):
         res = set()
         for _dir in Direction.cardinal_directions():
             neigh = node + (_dir * self.step)
@@ -139,7 +139,7 @@ def dijkstra(graph: Graph, source: Point or Set[Point], end_condition=(lambda _:
             continue
 
         node_value = tree[tree.getParent(node), node]
-        for neighbour in filter(lambda n: n not in explored, graph.getNeighbours(node)):
+        for neighbour in filter(lambda n: n not in explored, graph.getNeighbours(node, parent=tree.getParent(node))):
             cost = graph[node, neighbour]
             if cost < MAX_INT:
                 tree.addEdge(node, neighbour, node_value + cost)

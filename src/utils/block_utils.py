@@ -737,11 +737,13 @@ class BlockAPI:
             return f"{material}_door"
 
     @staticmethod
-    def getTorch(**kwargs):
-        if not kwargs:
-            return "torch"
-        else:
-            return "wall_torch" + BlockAPI.__buildBlockState({"facing": "north"}, **kwargs)
+    def getTorch(redstone=False, **kwargs):
+        block_state = "torch"
+        if kwargs:
+            block_state = "wall_" + block_state + BlockAPI.__buildBlockState({"facing": "north"}, **kwargs)
+        if redstone:
+            block_state = "redstone_" + block_state
+        return block_state
 
     @staticmethod
     def getFence(material, **kwargs):
@@ -835,9 +837,9 @@ def clear_tree_at(terrain, point: Point) -> None:
     terrain.trees.remove_tree_at(point - terrain.area.origin)
 
 
-def place_torch(x, y, z):
+def place_torch(x, y, z, redstone=False):
     if direct_interface.getBlock(x, y, z).endswith(":air"):
-        torch = BlockAPI.getTorch()
+        torch = BlockAPI.getTorch(redstone)
         setBlock(Point(x, z, y), torch)
 
 

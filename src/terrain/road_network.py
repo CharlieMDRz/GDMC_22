@@ -10,6 +10,7 @@ from generation.generators import *
 from generation.road_generator import RoadGenerator
 from parameters import *
 from utils import Point, euclidean
+from utils.algorithms.graphs import GridGraph
 from .obstacle_map import ObstacleMap
 
 
@@ -41,7 +42,7 @@ class RoadNetwork(metaclass=Singleton):
         self.terrain = mc_map
         RoadNetwork.INSTANCE = self
         from utils.algorithms.path_finder import PathFinder
-        self.__pathFinder: PathFinder = PathFinder(6)
+        self.__pathFinder: PathFinder = PathFinder(6, GridGraph(True, step=1, cost=road_recording_cost), GridGraph(True, step=6, cost=road_build_cost))
 
     # region GETTER AND SETTER
 
@@ -393,9 +394,14 @@ def road_build_cost(src_point, dest_point):
         hm = network.terrain.height_map
         steepness: Point = (hm.steepness(src_point, norm=False) + hm.steepness(dest_point, norm=False)) / 2
         elevation = abs(steepness.dot(direction))
-        if elevation / scale > 3:
-            return MAX_INT
         cost += (1 + elevation) ** 2 - 1  # quadratic cost over slopes
+
+        # discount to cross rail tracks
+        from terrain.rail_network import RailNetwork
+        rail_road = RailNetwork()
+        rail_dist = rail_road.get_distance(dest_point)
+        if rail_dist <= RAIL_ROAD_SPACING:
+            cost += scale * RAIL_ROAD_PENALTY
 
         road_build_cache[(src_point, dest_point)] = value = max(scale, cost)
         return value

@@ -13,6 +13,7 @@ from generation.building_palette import random_palette
 from generation.generators import place_sign
 from parameters import MAX_HEIGHT, BUILDING_HEIGHT_SPREAD, TERRAFORM_ITERATIONS, AVERAGE_PARCEL_SIZE
 from terrain import TerrainMaps
+from terrain.rail_network import compute_train_line
 from terrain.road_network import RoadNetwork
 from utils import *
 from utils.algorithms import min_spanning_tree, tree_distance
@@ -61,6 +62,7 @@ class Settlement:
         else:
             self._road_network.create_road(district_centers[0], district_centers[0])
         self.init_road_network()
+        compute_train_line(self._maps.rail_network, district_centers)
 
         # mark town centers
         for town_center in map(lambda t: t.center, self.districts.towns.values()):
@@ -103,6 +105,7 @@ class Settlement:
         from terrain import ObstacleMap
         ObstacleMap().add_obstacle(Point(0, 0), self._road_network.obstacle)
         ObstacleMap().add_obstacle(Point(0, 0), self._maps.fluid_map.as_obstacle_array)
+        ObstacleMap().add_obstacle(Point(0, 0), self._maps.rail_network.obstacle)
         for parcel in self._parcels:
             ObstacleMap().hide_obstacle(*parcel.obstacle(forget=True), False)
             if isinstance(parcel, MaskedParcel):
@@ -154,6 +157,7 @@ class Settlement:
 
     def generate(self):
         self._road_network.generate(self._maps, self.districts)
+        self._maps.rail_network.generate(self._maps, self.districts)
 
         self.__generate_road_signs()
 

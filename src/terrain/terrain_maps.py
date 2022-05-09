@@ -1,6 +1,7 @@
 from gdpc import worldLoader
 
 from terrain import RoadNetwork, EntityManager
+from terrain.rail_network import RailNetwork
 from terrain.biomes import BiomeMap
 from terrain.fluid_map import FluidMap
 from terrain.height_map import HeightMap
@@ -34,6 +35,7 @@ class TerrainMaps:
 
         t1 = time()
         self.road_network = RoadNetwork(self.width, self.length, self)  # type: RoadNetwork
+        self.rail_network: RailNetwork = RailNetwork(self.width, self.length, self)
         print(f'Computed road map in {time() - t1}')
 
         t1 = time()

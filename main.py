@@ -4,6 +4,7 @@ Main call module for my GDMC submission, includes a command line parser and the 
 import argparse
 import logging
 import multiprocessing as mp
+import traceback
 from os import sep
 import time
 import sys
@@ -17,7 +18,14 @@ this_path = str(__file__)  # path to this file
 this_path = sep.join(this_path.split(sep)[:-1])  # path to the directory where
 if not this_path: this_path = "."
 sys.path.insert(0, this_path + sep + 'src')  # path to our code
-logging.basicConfig()
+
+console_log = logging.StreamHandler(sys.stdout)
+console_log.setLevel(logging.INFO)
+file_log = logging.FileHandler('settlement_log_{}.log'.format(time.strftime('%Y-%m-%d_%H-%M-%S', time.gmtime())))
+logging.basicConfig(
+    level=logging.INFO,
+    handlers=[console_log, file_log]
+)
 
 from building_seeding import district
 from settlement import Settlement
@@ -31,32 +39,37 @@ def main(districts=None, seeding=None, parcels=None, generation=None, visualize=
     ObstacleMap.from_terrain(terrain)  # initialize obstacle map from the terrain
     settlement = Settlement(terrain)
 
-    if districts:
-        districts(settlement, visualize=visualize)
-    else: return
+    try:
+        if districts:
+            districts(settlement, visualize=visualize)
+        else: return
 
-    if seeding:
-        # define buildings list and seed them
-        seeding(settlement, visualize)
-    else: return
-    settlement.clean_road_network()
+        if seeding:
+            # define buildings list and seed them
+            seeding(settlement, visualize)
+        else: return
+        settlement.clean_road_network()
 
-    if parcels:
-        # define parcels around seeds
-        parcels(settlement, visualize=visualize)
-    else: return
+        if parcels:
+            # define parcels around seeds
+            parcels(settlement, visualize=visualize)
+        else: return
 
-    if generation:
-        # build buildings on parcels
-        settlement.terraform()
-        generation(settlement)
-    else: return
+        if generation:
+            # build buildings on parcels
+            settlement.terraform()
+            generation(settlement)
+        else: return
 
-    # Optional erasing of the generated settlement
-    if undo:
-        do_undo = input("Undo ? [y]/n").lower()
-        if do_undo in {"", "y"}:
-            terrain.undo()
+        # Optional erasing of the generated settlement
+        if undo:
+            do_undo = input("Undo ? [y]/n").lower()
+            if do_undo in {"", "y"}:
+                terrain.undo()
+    except Exception:
+        print("Uncaught exception, undoing gen for safety")
+        print(traceback.format_exc())
+        terrain.undo()
 
 
 def get_parser() -> argparse.ArgumentParser:
@@ -97,6 +110,7 @@ def get_generation_options(step_list: List[str]) -> Dict[str, Union[Callable, No
         },
 
         "S": {
+            "no": (lambda *o: None, "Skips seeding process"),
             "0": (Settlement.build_skeleton, "Iteratively seed positions for parcels of specific type")
         },
 
@@ -125,7 +139,7 @@ def get_generation_options(step_list: List[str]) -> Dict[str, Union[Callable, No
         print(f"Selecting {gen_step} algorithm...")
         func, desc = _steps_dictionary[step][step_variation]
         _gen_options[gen_step] = func
-        print(f"\tWill use '{func.__name__}': {desc}")
+        logging.info(f"\tWill use '{func.__name__}': {desc}")
 
     try:
         unspec_step = next(step for step in _gen_options if _gen_options[step] is None)

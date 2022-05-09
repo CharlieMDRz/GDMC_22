@@ -15,9 +15,11 @@ MAX_LAVA_EXPLORATION = 50
 PARCEL_REUSE_ADVANTAGE = 2.5  # interest multiplying cost when evaluating a parcel type replacement
 MAX_POND_EXPLORATION = 144  # should ideally be higher than the largest ponds to exterminate all of them
 
-# Each bridge costs a initial cost + linear cost on length
+# Path finding costs parameters
 BRIDGE_COST = 10
-BRIDGE_UNIT_COST = 4
+BRIDGE_UNIT_COST = 5
+RAIL_ROAD_SPACING = 6
+RAIL_ROAD_PENALTY = 5
 
 # buildings dimensions
 MAX_HEIGHT = 16  # 12 -> max 3 floors

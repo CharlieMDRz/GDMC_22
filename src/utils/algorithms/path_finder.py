@@ -12,21 +12,21 @@ from utils import Singleton, BuildArea, Point, argmin, euclidean, Position, Dire
 from .graphs import Graph, Tree, GridGraph, dijkstra
 
 
-class PathFinder(metaclass=Singleton):
+class PathFinder:
     """
     Path finder. Combines Dijkstra for optimal medium step path, and A* to follow this rough path from origin to destination
     """
     ASTAR_TIME_LIMIT = 15
 
-    def __init__(self, granularity: int):
+    def __init__(self, granularity: int, path_cost_graph: Graph, heuristic_graph: Graph):
         self.__area: BuildArea = BuildArea()
         self.__granularity: int = granularity
 
         self.__has_road = full((self.gwidth, self.glength), False, dtype=bool)
 
         from terrain.road_network import road_build_cost
-        self.__cost_graph: Graph = GridGraph(True, step=granularity, cost=road_build_cost)
-        self.__local_cost_graph: Graph = GridGraph(True, step=1, cost=road_recording_cost)
+        self.__path_cost_graph: Graph = path_cost_graph
+        self.__heuristic_graph: Graph = heuristic_graph
 
     def getRoughPath(self, target: Position, source: Position = None):
         """
@@ -40,15 +40,16 @@ class PathFinder(metaclass=Singleton):
         if source is None:
             # If target is None, Dijkstra explores until finding a road point
             end_condition = (lambda _: self.__hasRoad(_))
-            target_tree, rough_source = dijkstra(self.__cost_graph, rough_target, end_condition)  # type: Tree, Position
+            target_tree, rough_source = dijkstra(self.__heuristic_graph, rough_target, end_condition)  # type: Tree, Position
             source = rough_source
         else:
             rough_source = source - source % step
             # Otherwise, explores until joining both positions
-            end_condition = (lambda _: _ == rough_source)  # ends in rough source
-            target_tree, _ = dijkstra(self.__cost_graph, rough_target, end_condition)  # type: Tree, Position  # starts in target
+            end_condition = (lambda _: euclidean(_, rough_source) < self.__granularity)  # ends in rough source
+            target_tree, _ = dijkstra(self.__heuristic_graph, rough_target, end_condition)  # type: Tree, Position  # starts in target
 
         # In both cases, target_tree starts in rough_target
+        rough_source = argmin(target_tree.nodes, lambda n: euclidean(n, rough_source))
         targetSourcePath = target_tree.getPathTowards(rough_source)
         sourceTargetPath = list(reversed(targetSourcePath))  # path from source to target
         if len(sourceTargetPath) < 3:
@@ -77,7 +78,7 @@ class PathFinder(metaclass=Singleton):
         """
         roughPathTowardsTarget = self.getRoughPath(target)
         roughSource = roughPathTowardsTarget[0]
-        _, source = dijkstra(self.__local_cost_graph, roughSource, end_condition=(lambda _: RoadNetwork().is_road(_)))
+        _, source = dijkstra(self.__path_cost_graph, roughSource, end_condition=(lambda _: RoadNetwork().is_road(_)))
         return self.__astar(source, target, roughPathTowardsTarget)
 
     def registerRoad(self, road: List[Position]):
@@ -92,46 +93,6 @@ class PathFinder(metaclass=Singleton):
     def __hasRoad(self, p: Position):
         q = p // self.__granularity
         return self.__has_road[q.x, q.z]
-
-    def __dijkstra(self, source: Position, target: Position = None) -> Tuple[Tree, Position]:
-        """
-        Dijkstra algorithm
-        """
-
-        if isinstance(source, Point):
-            source = {source}
-        tree = Tree()
-        explored: Set[Position] = set()
-        for source_pos in source:
-            tree.addEdge(source_pos, source_pos, 0)
-        neighbours: SortedList = SortedList(source, lambda pos: -tree[tree.getParent(pos), pos])
-
-        node: Position = target
-        while neighbours:
-            node = neighbours.pop()
-            if node == target or self.__hasRoad(node):
-                break
-
-            elif node in explored:
-                continue
-
-            for neighbour in filter(lambda n: n not in explored, self.__neighbourhood(node, self.__granularity)):
-                cost = self.__cost_graph[node, neighbour]
-                if cost < MAX_INT and (neighbour not in tree.getNeighbours(node) or tree[tree.getParent(neighbour), neighbour] > cost):
-                    tree.addEdge(node, neighbour, cost)
-                    neighbours.add(neighbour)
-            explored.add(node)
-
-        return tree, node
-
-    def __neighbourhood(self, node: Point, step: int) -> Set[Point]:
-        res = set()
-        for _dir in Direction.cardinal_directions():
-            neigh = node + (_dir * step)
-            if 0 <= neigh.x < self.__area.width and 0 <= neigh.z < self.__area.length:
-                res.add(neigh)
-
-        return res
 
     def __astar(self, source: Position, target: Position, rough_path):
         """
@@ -156,6 +117,7 @@ class PathFinder(metaclass=Singleton):
             _distance_map = full(dims, MAX_INT, dtype=float)
             _distance_map[source.x, source.z] = 0
             _predecessor_map = full(dims, None)
+            _predecessor_map[source.xz] = source
             _heuristic_map = full(dims, MAX_INT, dtype=float)
             return _distance_map, _predecessor_map, _heuristic_map
 
@@ -171,7 +133,7 @@ class PathFinder(metaclass=Singleton):
 
         def update_distance(_node, _neigh):
             cost = cost_function(_node, _neigh)
-            if cost == MAX_INT:
+            if cost >= MAX_INT:
                 return
             old_dist = distance_map[_neigh.x, _neigh.z]
             new_dist = distance_map[_node.x, _node.z] + cost
@@ -184,7 +146,7 @@ class PathFinder(metaclass=Singleton):
             _node = target
             _path = [_node]
             while _node != source:
-                _node = predecessor_map[_node.x, _node.z]
+                _node = predecessor_map[_node.xz]
                 _path.append(_node)
             return list(reversed(_path))
 
