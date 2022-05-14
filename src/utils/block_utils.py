@@ -4,10 +4,11 @@ from typing import Iterable
 
 from gdpc import interface, worldLoader, direct_interface, lookup
 
-from .geometry_utils import Point, BoundingBox, BuildArea, Singleton
+from .geometry_utils import Point, BuildArea
+from .misc_objects_functions import Singleton
+from .pymclevel.box import BoundingBox
 
 interface.globalinterface.setBuffering(True)
-alterated_pos = set()
 
 
 def setBlock(point: Point, blockstate: str, buffer_size=1000):
@@ -18,8 +19,7 @@ def setBlock(point: Point, blockstate: str, buffer_size=1000):
         rotations = ['north', 'west', 'east', 'south']
         blockstate += f"[facing={rotations[rotation_id]}]"
 
-    res = interface.globalinterface.placeBlockBuffered(point.x, point.y, point.z, blockstate, buffer_size)
-    alterated_pos.add((point.x, point.z))
+    interface.globalinterface.placeBlockBuffered(point.x, point.y, point.z, blockstate, buffer_size)
 
 
 def dump():
@@ -802,7 +802,8 @@ cube_ends = ['bricks', 'ore', 'block', 'terracotta', 'wool', 'cobblestone', 'san
              'pillar', 'quartz']
 block_ends = {}
 for c in lookup.BLOCKS:
-    if '_' not in c: continue
+    if '_' not in c:
+        continue
     e = c.split('_')[-1]
     block_ends.setdefault(e, set()).add(c)
 
@@ -865,7 +866,7 @@ def symmetric_copy(origin: Point, size: Point, destination: Point, x_sym=False, 
         return
 
     for dx, dy, dz in product(range(size.x), range(size.y), range(size.z)):
-        dp = Point(dx, dy, dz)
+        dp = Point(dx, dz, dy)
         destination_x = destination.x + ((size.x - dx) if x_sym else dx)
         destination_y = destination.y + ((size.y - dy) if y_sym else dy)
         destination_z = destination.z + ((size.z - dz) if z_sym else dz)

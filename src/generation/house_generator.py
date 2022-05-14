@@ -423,7 +423,7 @@ class _WallSymbol(Generator):
             if sum(is_win) == 0: is_win = [0] + [1 for _ in range(len(is_win)-2)] + [0]
             door_val = [euclidean(entry, Point(box.minx+_, box.minz)) if is_win[_] or not sum(is_win) else 1000. for _ in range(box.width)]
             door_x = argmin(door_val)
-            door_box = TransformBox(box.origin + (door_x, 0, 0), (1, box.height, 1))
+            door_box = TransformBox(box.origin + (door_x, 0, 0), (1, 3, 1))
             if door_x > 0 and is_win[door_x - 1]:
                 door_box.expand(Direction.of(dx=-1), inplace=True)
             elif door_x < box.width - 1 and is_win[door_x + 1]:

@@ -9,12 +9,11 @@ import numpy as np
 from sortedcontainers import SortedList
 
 from building_seeding import Districts, Parcel, VillageSkeleton, BuildingType, MaskedParcel
-from generation.building_palette import random_palette
 from generation.generators import place_sign
 from parameters import MAX_HEIGHT, BUILDING_HEIGHT_SPREAD, TERRAFORM_ITERATIONS, AVERAGE_PARCEL_SIZE
+from path_networks import RoadNetwork
+from path_networks.rail_network import compute_train_line
 from terrain import TerrainMaps
-from terrain.rail_network import compute_train_line
-from terrain.road_network import RoadNetwork
 from utils import *
 from utils.algorithms import min_spanning_tree, tree_distance
 
@@ -29,7 +28,7 @@ class Settlement:
     def __init__(self, maps):
         # type: (TerrainMaps) -> Settlement
         self._maps = maps  # type: TerrainMaps
-        self.districts = Districts(self._maps.area)
+        self.districts: Districts = Districts(self._maps.area)
         self._origin = maps.area.origin
         self._center: Point = Point(0, 0)
         self._road_network = self._maps.road_network
@@ -62,10 +61,12 @@ class Settlement:
         else:
             self._road_network.create_road(district_centers[0], district_centers[0])
         self.init_road_network()
-        compute_train_line(self._maps.rail_network, district_centers)
+
+        town_centers = {t.center for t in self.districts.towns.values()}
+        compute_train_line(self._maps.rail_network, town_centers)
 
         # mark town centers
-        for town_center in map(lambda t: t.center, self.districts.towns.values()):
+        for town_center in town_centers:
             self._parcels.append(Parcel(town_center, BuildingType.ghost, self._maps))
 
     def init_road_network(self):

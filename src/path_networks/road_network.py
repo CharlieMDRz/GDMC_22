@@ -1,18 +1,17 @@
 # coding=utf-8
 import time
 from random import choice
-from typing import Callable, List, Set
+from typing import Callable, Set
 
 from sortedcontainers import SortedList
 
 import terrain
 from generation.generators import *
-from generation.road_generator import RoadGenerator
+from path_networks.road_generator import RoadGenerator
 from parameters import *
 from utils import Point, euclidean
 from utils.algorithms.graphs import GridGraph
-from .obstacle_map import ObstacleMap
-
+from terrain.obstacle_map import ObstacleMap
 
 class RoadNetwork(metaclass=Singleton):
     """
@@ -41,7 +40,7 @@ class RoadNetwork(metaclass=Singleton):
         self.__generator = RoadGenerator(self, mc_map.box, mc_map) if mc_map else None
         self.terrain = mc_map
         RoadNetwork.INSTANCE = self
-        from utils.algorithms.path_finder import PathFinder
+        from .path_finder import PathFinder
         self.__pathFinder: PathFinder = PathFinder(6, GridGraph(True, step=1, cost=road_recording_cost), GridGraph(True, step=6, cost=road_build_cost))
 
     # region GETTER AND SETTER
@@ -373,7 +372,8 @@ def road_build_cost(src_point, dest_point):
     is_dest_obstacle = not ObstacleMap().is_accessible(dest_point)
     is_dest_obstacle |= network.terrain.fluid_map.is_lava(dest_point, margin=MIN_DIST_TO_LAVA)
     if is_dest_obstacle:
-        return MAX_INT
+        # return MAX_INT
+        return 100
 
     # Then, terrain specific costs, use cache
     if (src_point, dest_point) not in road_build_cache:
@@ -397,7 +397,7 @@ def road_build_cost(src_point, dest_point):
         cost += (1 + elevation) ** 2 - 1  # quadratic cost over slopes
 
         # discount to cross rail tracks
-        from terrain.rail_network import RailNetwork
+        from path_networks import RailNetwork
         rail_road = RailNetwork()
         rail_dist = rail_road.get_distance(dest_point)
         if rail_dist <= RAIL_ROAD_SPACING:

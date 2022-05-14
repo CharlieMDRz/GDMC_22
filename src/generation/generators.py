@@ -278,9 +278,9 @@ class CropGenerator(MaskedGenerator):
                 continue
             if self.is_lateral(ax, az):
                 box = BoundingBox((ax, y + 1, az), (1, height_map_max[x, z] - y + 1, 1))
-                AREA_STRUCTURE.fill(box, fence_block)
-                new_gate_pos = Point(ax, az, y)
-                new_gate_dist = euclidean(new_gate_pos, self._entry_point)
+                AREA_STRUCTURE.fill(box, fence_block, 2)
+                new_gate_pos = Point(ax, az, y+1)
+                new_gate_dist = euclidean(Position(ax, az, y+1, True), self._entry_point)
                 if (gate_pos is None or new_gate_dist < gate_dist) and not self.is_corner(new_gate_pos):
                     gate_pos, gate_dist = new_gate_pos, new_gate_dist
                     door_dir_vec = self._entry_point - self.mean
@@ -292,7 +292,7 @@ class CropGenerator(MaskedGenerator):
                     gate_block = BlockAPI.getFence(palette['door'], facing=str(door_dir).lower())
 
         if gate_pos:
-            AREA_STRUCTURE.set(gate_pos, gate_block, 2)
+            AREA_STRUCTURE.set(gate_pos, gate_block, 3)
             for dir in (door_dir.rotate(), -door_dir.rotate()):  # type: Direction
                 if direct_interface.getBlock(dir.x, dir.y, dir.z).endswith(fence_block):
                     place_torch(dir.x, dir.y + 1, dir.z)

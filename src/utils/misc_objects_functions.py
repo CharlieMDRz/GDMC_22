@@ -1,3 +1,4 @@
+import itertools
 from os.path import realpath, sep
 from random import random
 from typing import Tuple, Iterable
@@ -19,6 +20,7 @@ __all__ = [
     'raytrace',
     'Singleton'
 ]
+
 
 def bernouilli(success_rate=.5):
     # type: (float) -> bool

@@ -13,18 +13,24 @@ class Structure(BoundingBox):
         return cls(box.origin, box.size)
 
     def set(self, pos: Position, blockstate: str, priority: int = 1):
-        if pos.coords not in self:
+        if isinstance(pos, Position):
+            absolute_point = Point(pos.abs_x, pos.abs_z, pos.y)
+            relative_point = pos
+        else:
+            pos: Point
+            absolute_point = pos
+            relative_point = pos - self.origin
+        if absolute_point.coords not in self:
             return
-        struct_pos: Point = pos - self.origin
-        prev_priority = self.__priority[struct_pos.coords]
+        prev_priority = self.__priority[relative_point.coords]
 
         if priority > prev_priority:
-            setBlock(pos, blockstate)
-            self.__priority[struct_pos.coords] = priority
+            setBlock(absolute_point, blockstate)
+            self.__priority[relative_point.coords] = priority
 
     def fill(self, box: BoundingBox, blockstate: str, priority: int = 1):
         for x, y, z, in box.positions:
-            p = Position(x, z, y)
+            p = Point(x, z, y)
             self.set(p, blockstate, priority)
 
     @property

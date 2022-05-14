@@ -1,7 +1,7 @@
 from gdpc import worldLoader
 
-from terrain import RoadNetwork, EntityManager
-from terrain.rail_network import RailNetwork
+from terrain import EntityManager
+from path_networks import RoadNetwork, RailNetwork
 from terrain.biomes import BiomeMap
 from terrain.fluid_map import FluidMap
 from terrain.height_map import HeightMap

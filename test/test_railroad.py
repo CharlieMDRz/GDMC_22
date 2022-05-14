@@ -1,11 +1,10 @@
 import math
-import time
 import random
 from typing import Tuple
 
 import matplotlib.pyplot as plt
 
-from terrain.rail_network import RailRoadGraph
+from path_networks.rail_network import RailRoadGraph
 from utils import Point
 
 

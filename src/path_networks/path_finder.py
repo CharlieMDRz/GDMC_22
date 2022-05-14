@@ -1,15 +1,13 @@
 from math import ceil
-import multiprocessing as mp
-import time
-from typing import List, Set, Tuple
+from typing import List
 
 from numpy import full
 from sortedcontainers import SortedList
 
 from parameters import MAX_INT
-from terrain.road_network import road_recording_cost, RoadNetwork
-from utils import Singleton, BuildArea, Point, argmin, euclidean, Position, Direction
-from .graphs import Graph, Tree, GridGraph, dijkstra
+from .road_network import RoadNetwork, road_build_cost as cost_function
+from utils import BuildArea, argmin, euclidean, Position
+from utils.algorithms.graphs import Graph, Tree, dijkstra
 
 
 class PathFinder:
@@ -24,7 +22,6 @@ class PathFinder:
 
         self.__has_road = full((self.gwidth, self.glength), False, dtype=bool)
 
-        from terrain.road_network import road_build_cost
         self.__path_cost_graph: Graph = path_cost_graph
         self.__heuristic_graph: Graph = heuristic_graph
 
@@ -100,7 +97,6 @@ class PathFinder:
         :param source: source point (x, z)
         :param target: target point (x, z)
         """
-        from terrain.road_network import road_build_cost as cost_function
 
         def build_cumsum() -> List:
             """

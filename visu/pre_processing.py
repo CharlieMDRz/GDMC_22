@@ -164,10 +164,10 @@ class MapStock:
         plt.savefig(file_path, dpi=dpi*9)    # increase dpi factor to improve quality
         plt.close()
 
+
 if __name__ == '__main__':
 
-
-    from terrain.road_network import *
+    from path_networks.road_network import *
     from utils import Point2D
     from building_seeding import house_type
     from building_seeding.interest import accessibility

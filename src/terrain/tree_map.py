@@ -24,7 +24,7 @@ class TreesMap(PointArray):
         return obj
 
     def remove_tree_at(self, position: Point):
-        tree_index = int(self[position])
+        tree_index = int(self[position.xz])
         for x, y, z in self.__trees[tree_index]:
             tree_point = Point(x, z, y) + self.__origin
             setBlock(tree_point, BlockAPI.blocks.Air)

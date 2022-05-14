@@ -6,18 +6,19 @@ from typing import List, Set, Dict
 
 import numpy as np
 from gdpc import lookup
-from gdpc.geometry import line2d
 
 from generation.structure import AREA_STRUCTURE
 from parameters import RAIL_ROAD_SPACING, RAIL_ROAD_PENALTY
 from utils import Position, Point, manhattan, euclidean, Direction, ground_blocks, BlockAPI, \
     TransformBox, place_torch, argmin, getBlockRelativeAt, BuildArea, Singleton, clear_tree_at
 from utils.algorithms.graphs import GridGraph
-from utils.algorithms.path_finder import PathFinder
+from .path_finder import PathFinder
+from .railroad_generator import RailRoadGenerator
 from .road_network import RoadNetwork, dump, road_build_cost, MAX_INT
 
 __all__ = [
-    'RailNetwork'
+    'RailNetwork',
+    'RailRoadGraph'
 ]
 
 all_but_rails = [_ for _ in lookup.BLOCKS if ("Rail" not in str(_) and "Redstone" not in str(_))]
@@ -79,13 +80,14 @@ class RailNetwork(RoadNetwork, metaclass=Singleton):
         return [], []
 
     def generate(self, level, districts):
-        for rail in self.__elements:
-            try:
-                rail.generate(level)
-            except AssertionError:
-                print(f"failed to generate section {rail._connectors}")
-                print(traceback.format_exc())
-                continue
+        RailRoadGenerator(self.network > 0).generate(level, self.__maps.height_map)
+        # for rail in self.__elements:
+        #     try:
+        #         rail.generate(level)
+        #     except AssertionError:
+        #         print(f"failed to generate section {rail._connectors}")
+        #         print(traceback.format_exc())
+        #         continue
 
 
 def hermit_curve(p0: Point, q0: Point, p1: Point, q1: Point) -> List[Point]:
@@ -397,10 +399,10 @@ def place_accelerator(p1: Position, p2: Position, y=None):
     if isinstance(p1, Point):
         y = p1.y
     direction_str = axis_dir(Direction.of(*(p2 - p1).coords))
-    AREA_STRUCTURE.set(Point(p1.x, y + 1, p1.z), f"detector_rail[shape={direction_str}])", 1003)
-    AREA_STRUCTURE.set(Point(p1.x, y, p1.z), BlockAPI.blocks.Cobblestone, 1003)
-    AREA_STRUCTURE.set(Point(p2.x, y + 1, p2.z), f"powered_rail[shape={direction_str}]", 1003)
-    AREA_STRUCTURE.set(Point(p2.x, y, p2.z), BlockAPI.blocks.Cobblestone, 1003)
+    AREA_STRUCTURE.set(Point(p1.x, p1.z, y + 1), f"detector_rail[shape={direction_str}])", 1003)
+    AREA_STRUCTURE.set(Point(p1.x, p1.z, y), BlockAPI.blocks.Cobblestone, 1003)
+    AREA_STRUCTURE.set(Point(p2.x, p2.z, y + 1), f"powered_rail[shape={direction_str}]", 1003)
+    AREA_STRUCTURE.set(Point(p2.x, p2.z, y), BlockAPI.blocks.Cobblestone, 1003)
 
 
 def axis_dir(direction):
