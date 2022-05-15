@@ -1,6 +1,7 @@
+import logging
 import random
 from itertools import product
-from typing import Iterable
+from typing import Iterable, List, Tuple
 
 from gdpc import interface, worldLoader, direct_interface, lookup
 
@@ -63,6 +64,7 @@ class BlockAPI:
         AcaciaTrapdoor = "acacia_trapdoor"
         AcaciaWallSign = "acacia_wall_sign"
         AcaciaWood = "acacia_wood"
+        ActivatorRail = "activator_rail"
         Air = "air"
         Allium = "allium"
         AncientDebris = "ancient_debris"
@@ -252,6 +254,7 @@ class BlockAPI:
         DeadTubeCoral = "dead_tube_coral"
         DeadTubeCoralBlock = "dead_tube_coral_block"
         DeadTubeCoralFan = "dead_tube_coral_fan"
+        DetectorRail = "detector_rail"
         DiamondBlock = "diamond_block"
         DiamondOre = "diamond_ore"
         Diorite = "diorite"
@@ -495,6 +498,7 @@ class BlockAPI:
         PolishedGraniteStairs = "polished_granite_stairs"
         Poppy = "poppy"
         Potatoes = "potatoes"
+        PoweredRail = "powered_rail"
         PrismarineBrickSlab = "prismarine_brick_slab"
         PrismarineBrickStairs = "prismarine_brick_stairs"
         PrismarineBricks = "prismarine_bricks"
@@ -519,6 +523,7 @@ class BlockAPI:
         QuartzPillar = "quartz_pillar"
         QuartzSlab = "quartz_slab"
         QuartzStairs = "quartz_stairs"
+        Rail = "rail"
         RedBanner = "red_banner"
         RedBed = "red_bed"
         RedCarpet = "red_carpet"
@@ -903,6 +908,24 @@ class BlockStateDict(dict, metaclass=Singleton):
                             data[key] = set()
                         data[key].add(value)
         return data
+
+
+def build_block_state(block: str, **kwargs) -> str:
+    block_states = BlockStateDict()
+    valid_tags: List[Tuple[str, str]] = []
+
+    if block not in block_states:
+        logging.error(f"no tags associated to block {block}")
+    else:
+        for tag, tag_value in kwargs.items():
+            if tag not in block_states[block]:
+                logging.error(f"no tag {tag} associated to block {block}")
+            elif tag_value not in block_states[block][tag]:
+                logging.error(f"tag {tag} of block {block} cannot be set to {tag_value}")
+            else:
+                valid_tags.append((tag, tag_value))
+
+    return f"{block}[{', '.join('='.join(tag_value) for tag_value in valid_tags)}]"
 
 
 if __name__ == '__main__':

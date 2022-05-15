@@ -105,8 +105,8 @@ def hermit_curve(p0: Point, q0: Point, p1: Point, q1: Point) -> List[Point]:
 
     distance = int(manhattan(p0, p1))
     curve = [hermit(0).asPosition]
-    for i in range(1, distance + 1):
-        new_curve_point = hermit(i / distance).asPosition
+    for t in np.linspace(0, 1, distance * 2):
+        new_curve_point = hermit(t).asPosition
         if new_curve_point.xz != curve[-1].xz:
             curve.append(new_curve_point)
     return curve
@@ -257,12 +257,12 @@ class RailWay(RailElement):
             if lights == [] or euclidean(curve_p, lights[-1]) > self.DIST_BTWN_LIGHTS:
                 lights.append(curve_p)
                 if underground:
-                    AREA_STRUCTURE.set(Point(x, y + 3, z), BlockAPI.blocks.SeaLantern)
+                    AREA_STRUCTURE.set(Point(x, z, y + 3), BlockAPI.blocks.SeaLantern)
                 elif getBlockRelativeAt(level.level, x, y + 1, z) == 0:
-                    AREA_STRUCTURE.set(Point(x, y + 1, z), BlockAPI.blocks.OakFence)
+                    AREA_STRUCTURE.set(Point(x, y + 1), BlockAPI.blocks.OakFence)
                     place_torch(x, y + 2, z)
                     if getBlockRelativeAt(level.level, x, y, z) == 0:
-                        AREA_STRUCTURE.set(Point(x, y, z), BlockAPI.blocks.OakPlanks)
+                        AREA_STRUCTURE.set(Point(x, z, y), BlockAPI.blocks.OakPlanks)
             if not underground:
                 clear_tree_at(level, Point(curve_p.abs_x, curve_p.abs_z))
         dump()
@@ -481,7 +481,7 @@ class RailRoadGraph(GridGraph):
             except ValueError:
                 print(node, prev_section, prev_direction, angle, arc_point)
 
-        neighbours = {_ for _ in neighbours if (0 <= _.x < self.width and 0 <= _.z < self.length)}
+        neighbours = {_ for _ in neighbours if (2 <= _.x < self.width-2 and 2 <= _.z < self.length-2)}
         return neighbours
 
 

@@ -4,10 +4,11 @@ import numpy as np
 from sortedcontainers import SortedList
 
 from parameters import MAX_INT
-from utils import Point, BuildArea, manhattan, Direction
+from utils import Point, BuildArea, manhattan, Direction, Position
 
 __all__ = [
     'connected_component',
+    'connected_components',
     'Graph',
     'GridGraph',
     'point_set_as_array'
@@ -169,6 +170,18 @@ def connected_component(
         max_size -= 1
 
     return component
+
+
+def connected_components(points: Set[Position]) -> List[Set[Position]]:
+    points_to_explore = points.copy()
+    components = []
+
+    while points_to_explore:
+        graph = GridGraph(False)
+        components.append(connected_component(graph, points_to_explore.pop(), lambda u, v: v in points_to_explore))
+        points_to_explore.difference_update(components[-1])
+
+    return components
 
 
 def point_set_as_array(points: Set[Point]) -> Tuple[Point, np.ndarray]:
