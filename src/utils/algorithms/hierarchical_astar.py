@@ -1,7 +1,7 @@
 from numba.typed import List as nbList
 from numpy.random import randint
 
-from utils.algorithms.fast_astar import abs_distance, numba, _in_limits, MAX_INT, \
+from utils.algorithms.fast_astar import abs_distance, numba, in_limits, MAX_INT, \
     _path_to_dest, _heuristic as euclidean, njit, np, jit
 from utils.misc_objects_functions import index_argmin
 GAMMA = 4
@@ -126,7 +126,7 @@ def _exploration_neighbourhood(x, z, width, length, step):
         for _ in numba.prange(4):
             dx, dz = dz, -dx
             x0, z0 = x + dx, z + dz
-            if _in_limits((x0, 0, z0), width, length):
+            if in_limits((x0, 0, z0), width, length):
                 neighbourhood.add((x0, z0))
     return neighbourhood
 

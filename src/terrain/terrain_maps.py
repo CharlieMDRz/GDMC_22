@@ -1,5 +1,8 @@
+import logging
+
 from gdpc import worldLoader
 
+from generation.structure import AREA_STRUCTURE
 from terrain import EntityManager
 from path_networks import RoadNetwork, RailNetwork
 from terrain.biomes import BiomeMap
@@ -72,9 +75,9 @@ class TerrainMaps:
     @staticmethod
     def request(build_area_json=None):
         from time import time
-        print("Requesting build area...", end='')
+        logging.info("Requesting build area...")
         area = BuildArea(build_area_json)
-        print(f"OK: {str(area)}")
+        logging.info(f"Found {str(area)}")
         print("Requesting level...")
         t0 = time()
         level = worldLoader.WorldSlice(area.x, area.z, area.x + area.width, area.z + area.length)
@@ -98,7 +101,7 @@ class TerrainMaps:
             for y in range(min_y - 2, max_y + 2):
                 coords = pos.abs_x, y, pos.abs_z
                 if old_level.getBlockAt(*coords) != new_level.getBlockAt(*coords):
-                    setBlock(Point(pos.abs_x, pos.abs_z, y), old_level.getBlockAt(*coords))
+                    AREA_STRUCTURE.set(pos.withCoords(y=y), old_level.getBlockAt(*coords), 100000)
         dump()
 
         self.entities.reset()

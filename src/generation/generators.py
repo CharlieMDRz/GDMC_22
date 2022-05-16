@@ -12,15 +12,16 @@ from scipy import ndimage
 from generation.building_palette import HousePalette
 from generation.structure import AREA_STRUCTURE
 from utils import *
+from utils.block_utils import build_block_state
 from utils.nbt_structures import StructureNBT
 
 SURFACE_PER_ANIMAL = 16
 
 
 class Generator:
-    _box = None  # type: TransformBox
+    _box: BoundingBox = None
 
-    def __init__(self, box: TransformBox, **kwargs):
+    def __init__(self, box: BoundingBox, **kwargs):
         self._box = box
         self._entry_point: Position = kwargs.get("entry_point", Position(0, 0))
         self.children = []  # type: List[Generator]
@@ -241,9 +242,6 @@ class CropGenerator(MaskedGenerator):
     def generate(self, level, height_map=None, palette=None):
         if self.width < 5 and self.length < 5:
             print(f"Parcel ({self.width}, {self.length}) at {self.mean} too small to generate a crop")
-            # for x, z in product(range(self.width), range(self.length)):
-            #     pos = Point(x + self.origin.x, z + self.origin.z, height_map[x, z] + 1)
-            #     AREA_STRUCTURE.set(pos, BlockAPI.blocks.DiamondBlock)
             return
         self._clear_trees(level)
         if self._sub_generator_function == self._gen_animal_farm:
@@ -262,7 +260,7 @@ class CropGenerator(MaskedGenerator):
             if entities:
                 from terrain.entity_manager import get_most_populated_animal
                 animal = get_most_populated_animal(entities)
-            else:
+            if not (entities and animal):
                 animal = self._pick_animal()
         print(f"Animal farm of type {animal}")
         fence_box = TransformBox(self.origin, (self.width, 1, self.length)).expand(-1, 0, -1)
@@ -327,12 +325,12 @@ class CropGenerator(MaskedGenerator):
         # Place crops
         for x, y, z in self.surface_pos(height):
             # farmland
-            AREA_STRUCTURE.set(Point(x, z, y), f"farmland[moisture=7]")
+            AREA_STRUCTURE.set(Point(x, z, y), f"farmland[moisture=7]", 3)
             # crop
             crop_age = crop_age + random.random() - .5
             int_crop_age = pos_bound(int(round(crop_age)), max_age)
             crop_block = f"{crop_type}[age={int_crop_age}]"
-            AREA_STRUCTURE.set(Point(x, z, y+1), crop_block)
+            AREA_STRUCTURE.set(Point(x, z, y+1), crop_block, 2)
 
         dump()
         self._irrigate_field(height, 4)
@@ -505,15 +503,15 @@ class WindmillGenerator(Generator):
 
 def place_street_lamp(x, y, z, material, h=0):
     h = max(1, 3+h)
-    AREA_STRUCTURE.fill(BoundingBox((x, y + 1, z), (1, h, 1)), BlockAPI.getFence(material))
-    AREA_STRUCTURE.set(Point(x, z, y + h + 1), alpha.RedstoneLamp)
-    AREA_STRUCTURE.set(Point(x, z, y + h + 2), f"{alpha.DaylightDetector}[inverted=true]")
+    AREA_STRUCTURE.fill(BoundingBox((x, y + 1, z), (1, h, 1)), BlockAPI.getFence(material), 5)
+    AREA_STRUCTURE.set(Point(x, z, y + h + 1), alpha.RedstoneLamp, 5)
+    AREA_STRUCTURE.set(Point(x, z, y + h + 2), build_block_state(alpha.DaylightDetector, inverted='true'), 5)
 
 
 def place_torch_post(x, y, z, block=None):
     if block is None:
         block = random.choice([alpha.OakFence, alpha.CobblestoneWall, alpha.MossyCobblestoneWall, alpha.SpruceFence])
-    AREA_STRUCTURE.set(Point(x, z, y+1), block)
+    AREA_STRUCTURE.set(Point(x, z, y+1), block, 5)
     place_torch(x, y+2, z)
 
 

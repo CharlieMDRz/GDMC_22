@@ -10,6 +10,7 @@ from sortedcontainers import SortedList
 
 from building_seeding import Districts, Parcel, VillageSkeleton, BuildingType, MaskedParcel
 from generation.generators import place_sign
+from generation.structure import AREA_STRUCTURE
 from parameters import MAX_HEIGHT, BUILDING_HEIGHT_SPREAD, TERRAFORM_ITERATIONS, AVERAGE_PARCEL_SIZE
 from path_networks import RoadNetwork
 from path_networks.rail_network import compute_train_line
@@ -227,17 +228,16 @@ class Settlement:
             new_y = smooth_height[u.x, u.z]
             self._maps.height_map.update([u], [new_y])
             surface_block = self._maps.level.getBlockAt(u.abs_x, ya, u.abs_z)
-            setBlock(Point(u.abs_x, u.abs_z, new_y), surface_block)
+            AREA_STRUCTURE.set(u.withCoords(y=new_y), surface_block, 0, force=True)
 
             if ya + 4 > new_y > ya:
                 below_block = self._maps.level.getBlockAt(u.abs_x, ya - 1, u.abs_z)
                 box = TransformBox((u.abs_x, ya, u.abs_z), (1, new_y - ya, 1))
-                fillBlocks(box, below_block)
+                AREA_STRUCTURE.fill(box, below_block, 0, force=True)
 
             elif new_y < ya:
-                # actually an else block
                 box = TransformBox((u.abs_x, new_y + 1, u.abs_z), (1, ya - new_y, 1))
-                fillBlocks(box, BlockAPI.blocks.Air)
+                AREA_STRUCTURE.fill(box, BlockAPI.blocks.Air, 0, force=True)
 
     def clean_road_network(self):
         road_map = (self._road_network.network > 0).astype(int)
@@ -277,16 +277,16 @@ class Settlement:
             towns: List[Town] = sorted(filter(lambda u: point != u.center, town_centers.values()), key=lambda town: distance_map[point, town.center])
             towns = towns[:3] if len(towns) > 3 else towns
             y = self._maps.height_map[point] + 1
-            setBlock(Point(point.x + self._origin.x, point.z + self._origin.z, y - 1), BlockAPI.blocks.PolishedDiorite)
+            AREA_STRUCTURE.set(point.asPosition.withCoords(y=(y - 1)), BlockAPI.blocks.PolishedDiorite, 10)
             for dy, town in enumerate(towns):
-                dir = town.center - point
-                dir = Point(-dir.z, dir.x)
+                sign_direction = town.center - point
+                sign_direction = Point(-sign_direction.z, sign_direction.x)
                 pos = point + self._origin + Direction.Top.value * (y + dy)
 
-                nom_voisine = town.name
+                neighbour_town_name = town.name
                 dist = int(distance_map[point, town.center])
                 if point in town_centers and town == towns[-1]:
                     nom_ville = town_centers[point].name
-                    place_sign(pos, BlockAPI.blocks.OakSign, dir, Text1=nom_ville, Text2="--------", Text3=f"{nom_voisine}", Text4=f"<--- {dist}m")
+                    place_sign(pos, BlockAPI.blocks.OakSign, sign_direction, Text1=nom_ville, Text2="--------", Text3=f"{neighbour_town_name}", Text4=f"<--- {dist}m")
                 else:
-                    place_sign(pos, BlockAPI.blocks.OakSign, dir, Text2=f"{nom_voisine}", Text3=f"<--- {dist}m")
+                    place_sign(pos, BlockAPI.blocks.OakSign, sign_direction, Text2=f"{neighbour_town_name}", Text3=f"<--- {dist}m")

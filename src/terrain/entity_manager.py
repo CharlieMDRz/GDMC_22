@@ -68,4 +68,7 @@ class EntityManager():
 def get_most_populated_animal(entity_manager: EntityManager):
     count = entity_manager.wild_entity_population
     animals = set(count.keys()).intersection(entity_manager.FARMING_ANIMALS)
-    return sorted(animals, key=count.__getitem__)[-1]
+    try:
+        return sorted(animals, key=count.__getitem__)[-1]
+    except IndexError:
+        return None

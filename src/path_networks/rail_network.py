@@ -52,10 +52,8 @@ class RailNetwork(RoadNetwork, metaclass=Singleton):
 
     def create_road(self, root_point=None, ending_point=None, path=None, is_station=False):
         logging.info(f"Creating rail way between {root_point} and {ending_point}")
-        # rough_path: List[Position] = self.__railPathFinder.getRoughPath(root_point, ending_point)
         rough_path: List[Position] = self.__railPathFinder.getPath(root_point, ending_point)
         rough_path = [Position(p.x, p.z, self.__maps.height_map[p.x, p.z]) for p in rough_path]
-        print("\n".join(map(str, rough_path)))
         path = [root_point]
         for i in range(len(rough_path)-1):
             # section nodes
@@ -80,14 +78,10 @@ class RailNetwork(RoadNetwork, metaclass=Singleton):
         return [], []
 
     def generate(self, level, districts):
-        RailRoadGenerator(self.network > 0).generate(level, self.__maps.height_map)
-        # for rail in self.__elements:
-        #     try:
-        #         rail.generate(level)
-        #     except AssertionError:
-        #         print(f"failed to generate section {rail._connectors}")
-        #         print(traceback.format_exc())
-        #         continue
+        try:
+            RailRoadGenerator(self.network > 0).generate(level, self.__maps.height_map)
+        except Exception:
+            traceback.print_exc()
 
 
 def hermit_curve(p0: Point, q0: Point, p1: Point, q1: Point) -> List[Point]:

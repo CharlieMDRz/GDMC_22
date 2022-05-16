@@ -1,13 +1,14 @@
 import itertools
 from math import ceil
 from time import sleep
-from typing import Dict
+from typing import Dict, Tuple, List
 
 import numpy as np
 from numpy import uint8
 from numpy.random.mtrand import choice
 
 from generation.generators import Generator, place_street_lamp, place_torch_post
+from generation.structure import AREA_STRUCTURE
 from terrain import ObstacleMap
 from utils import *
 from utils.misc_objects_functions import raytrace
@@ -52,22 +53,20 @@ class RoadGenerator(Generator):
                             b_id = palette_network[b]
                         network[x, z] = b_id
                         road_height_map[x, z] = y
-
-        for x in range(self.width):
-            for z in range(self.length):
-                if network[x, z]:
-                    y, b_id = road_height_map[x, z], network[x, z]
-                    b = network_palette[b_id]
-                    xa, za = x + x0, z + z0
-                    fillBlocks(TransformBox((xa, y, za), (1, 4, 1)), alpha.Air)
-                    setBlock(Point(xa, za, y-1), alpha.Dirt)
-                    setBlock(Point(xa, za, y), b)
-                    # if "slab" not in b and "stair" not in b and bernouilli(0.1):
-                    #     place_torch(terrain.level, xa, y + 1, za)
-                    h = height_map[x, z]
-                    if h < y:
-                        pole_box = TransformBox((xa, h, za), (1, y-h, 1))
-                        fillBlocks(pole_box, alpha.StoneBricks)
+        for x, z in zip(*np.where(network)):
+        # for x in range(self.width):
+        #     for z in range(self.length):
+        #         if network[x, z]:
+            y, b_id = road_height_map[x, z], network[x, z]
+            b = network_palette[b_id]
+            xa, za = x + x0, z + z0
+            AREA_STRUCTURE.fill(TransformBox((xa, y+2, za), (1, 2, 1)), alpha.Air, 100)
+            AREA_STRUCTURE.set(Position(x, z, y-1), alpha.Dirt, 10)
+            AREA_STRUCTURE.set(Position(x, z, y), b, 10)
+            h = height_map[x, z]
+            if h < y:
+                pole_box = TransformBox((xa, h, za), (1, y-h, 1))
+                AREA_STRUCTURE.fill(pole_box, alpha.StoneBricks)
 
         self.__generate_street_lamps(terrain, palette)
 
@@ -103,10 +102,10 @@ class RoadGenerator(Generator):
                     place_torch_post(x + x0, y, z + z0)
             elif unlit_array[x, z] == 1:
                 if in_village:
-                    setBlock(Point(x, z, h), alpha.ChiseledStoneBricks)
+                    AREA_STRUCTURE.set(Position(x, z, h), alpha.ChiseledStoneBricks, 5)
                     place_street_lamp(x + x0, h, z + z0, 'oak')
                 else:
-                    setBlock(Point(x, z, h), alpha.StrippedOakWood)
+                    AREA_STRUCTURE.set(Position(x, z, h), alpha.StrippedOakWood, 5)
                     place_torch_post(x + x0, h, z + z0)
             else:
                 # unsuitable position
@@ -118,8 +117,7 @@ class RoadGenerator(Generator):
                 if 0 <= (x + dx) < W and 0 <= (z + dz) < L:
                     unlit_array[x+dx, z+dz] = 0
 
-    def __compute_road_at(self, x, z, height_map, districts):
-        # type: (int, int, array, object) -> (int, str)
+    def __compute_road_at(self, x: int, z: int, height_map: np.ndarray, districts: np.ndarray) -> Tuple[int, str]:
         palette: RoadPalette = city_road_palette if districts[x, z] <= 1 else rusty_road_palette
 
         # Computes local road height depending of the height of road blocks +-1 block away
@@ -200,9 +198,9 @@ class RoadGenerator(Generator):
                     elevation = new_elevation
 
             if changed:
-                path_height = [int(round(_)) for _ in path_height]
+                path_height = path_height.round().astype(int)
                 self.__maps.height_map.update(path, path_height)
-                self.children.append(CarvedRoad(path, orig_path_height, self.__origin))
+                self.children.append(CarvedRoad(path, list(orig_path_height)))
                 for updated_point_index in filter(lambda _: path_height[_] != orig_path_height[_], range(len(path))):
                     point = path[updated_point_index]
                     ObstacleMap().add_obstacle(point)
@@ -249,8 +247,18 @@ class Bridge(Generator):
         bridge_height = np.minimum(h1, h2)
 
         for p, h in zip(self.__points, bridge_height):
-            ap = p + self.__origin
-            self.place_block(ap.x, h, ap.z)
+            if h % 1 == 0:
+                b = alpha.StoneBricks
+            else:
+                b = BlockAPI.getSlab("stone_brick", type="bottom")
+            pos = p.asPosition.withCoords(y=ceil(h))
+
+            if self.width > self.length:
+                for dz in range(-1, 2):
+                    AREA_STRUCTURE.set(pos + Point(0, dz), b)
+            else:
+                for dx in range(-1, 2):
+                    AREA_STRUCTURE.set(pos + Point(dx, 0), b)
 
     @property
     def width(self):
@@ -259,20 +267,6 @@ class Bridge(Generator):
     @property
     def length(self):
         return abs(self.__points[-1].z - self.__points[0].z)
-
-    def place_block(self, x, y, z):
-        if y % 1 == 0:
-            b = alpha.StoneBricks
-        else:
-            b = BlockAPI.getSlab("stone_brick", type="bottom")
-        y = ceil(y)
-
-        if self.width > self.length:
-            for dz in range(-1, 2):
-                setBlock(Point(x, z+dz, y), b)
-        else:
-            for dx in range(-1, 2):
-                setBlock(Point(x+dx, z, y), b)
 
     def __straighten_bridge_points(self):
         o1, o2 = self.__points[0], self.__points[-1]
@@ -287,8 +281,7 @@ class Bridge(Generator):
 
 
 class CarvedRoad(Generator):
-    def __init__(self, points, heights, origin):
-        # type: (List[Point], List[int], Point) -> None
+    def __init__(self, points: List[Point], heights: List[int]):
         x_min, x_max = min([_.x for _ in points]), max([_.x for _ in points])
         y_min, y_max = min(heights), max(heights)
         z_min, z_max = min([_.z for _ in points]), max([_.z for _ in points])
@@ -296,17 +289,16 @@ class CarvedRoad(Generator):
         Generator.__init__(self, init_box, entry_point=points[0])
         self.__points = [_ for _ in points]  # type: List[Point]
         self.__heights = [_ for _ in heights]  # type: List[int]
-        self.__origin = origin
 
     def generate(self, level, height_map=None, palette=None):
         for i in range(len(self.__points)):
             relative_road, ground_height = self.__points[i], self.__heights[i]  # type: Point, int
-            absolute_road = relative_road + self.__origin  # rp with absolute coordinates
+            absolute_road = relative_road.asPosition
             road_height = height_map[relative_road.x, relative_road.z]
             height = road_height + 2 - ground_height
             if height < 2:
-                road_box = TransformBox((absolute_road.x - 1, road_height + 1, absolute_road.z - 1), (3, 3, 3))
-                fillBlocks(road_box, alpha.Air, ground_blocks)
+                road_box = TransformBox((absolute_road.abs_x - 1, road_height + 1, absolute_road.abs_z - 1), (3, 3, 3))
+                AREA_STRUCTURE.fill(road_box, alpha.Air, replace=ground_blocks)
 
 
 class RoadPalette:

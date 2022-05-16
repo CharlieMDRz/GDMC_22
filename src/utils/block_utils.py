@@ -26,6 +26,8 @@ def setBlock(point: Point, blockstate: str, buffer_size=1000):
 def dump():
     from utils import BuildArea
     setBlock(BuildArea().origin, BlockAPI.blocks.Bedrock, 0)
+    from generation.structure import AREA_STRUCTURE
+    AREA_STRUCTURE.dump()
     direct_interface.runCommand("kill @e[type=minecraft:item]")
 
 

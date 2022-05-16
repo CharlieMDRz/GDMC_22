@@ -1,14 +1,16 @@
-from typing import Tuple, List
+import itertools
+from collections import OrderedDict
+from typing import Tuple, List, Set, Callable, Dict
 
-from gdpc import worldLoader
 import numba
-from numba import prange, i8
-from numba.core.types import UniTuple, Set as nbSet
 import numpy as np
+from gdpc import worldLoader
+from numba import prange
 
+from generation.structure import AREA_STRUCTURE
 from terrain import HeightMap
 from utils import *
-from utils.misc_objects_functions import _in_limits
+from utils.misc_objects_functions import in_limits
 
 
 class TreesMap(PointArray):
@@ -16,7 +18,7 @@ class TreesMap(PointArray):
     __tree_distance: np.ndarray = None
 
     def __new__(cls, level: worldLoader.WorldSlice, height: HeightMap):
-        values, trees = _process(level, height)
+        values, trees = detect_trees(level, height)
         obj = super().__new__(cls, values)
         obj.__trees = trees
         obj.__origin = Point(level.rect[0], level.rect[1])
@@ -24,11 +26,13 @@ class TreesMap(PointArray):
         return obj
 
     def remove_tree_at(self, position: Point):
-        tree_index = int(self[position.xz])
-        for x, y, z in self.__trees[tree_index]:
-            tree_point = Point(x, z, y) + self.__origin
-            setBlock(tree_point, BlockAPI.blocks.Air)
-        self.__trees[tree_index] = []
+        while self[position.xz]:
+            tree_index = int(self[position.xz].pop())
+            tree = self.__trees[tree_index]
+            while tree:
+                x, y, z = tree.pop()
+                tree_point = Point(x, z, y) + self.__origin
+                AREA_STRUCTURE.set(tree_point, BlockAPI.blocks.Air)
 
     @property
     def tree_distance(self) -> np.ndarray:
@@ -36,7 +40,7 @@ class TreesMap(PointArray):
             tree_distances = []
             for tree in self.__trees:
                 if tree:
-                    x, _, z = tree[0]  # base trunk block position
+                    x, _, z = list(tree)[0]  # base trunk block position
                     x_dist = X_ARRAY - x
                     z_dist = Z_ARRAY - z
                     tree_distances.append(abs(x_dist) + abs(z_dist))  # manhattan dist to the tree
@@ -48,60 +52,68 @@ class TreesMap(PointArray):
         return self.__tree_distance
 
 
-def _detect_trunks(level: worldLoader.WorldSlice, height: HeightMap):
+def _detect_trunks(level: worldLoader.WorldSlice, height: HeightMap) -> List[Set[Tuple[int, int, int]]]:
     # detect trunks
-    trunks = set()
+    trees: List[Set[Tuple[int, int, int]]] = []
+    trunk_2D_coords: Set[Tuple[int, int]] = set()
 
     for xz in prange(height.width * height.length):
         x = xz // height.length
         z = xz % height.length
         y = height[x, z] + 1
         block = getBlockRelativeAt(level, x, y, z)
-        if _is_trunk(block):
-            trunks.add((x, z))
+        block_neighbours = itertools.product(range(-1, 2), range(-1, 2))
+        if _is_trunk(block) and all((x + dx, z + dz) not in trunk_2D_coords for dx, dz in block_neighbours):
+            trees.append({(x, y, z)})
+            trunk_2D_coords.add((x, z))
 
-    return trunks
+    return trees
 
 
-def _process(level: worldLoader.WorldSlice, height: HeightMap):
+def detect_trees(level: worldLoader.WorldSlice, height: HeightMap):
     width, length = height.width, height.length
-    values = np.zeros((width, length))
+    values = np.full((width, length), None)
 
-    trunks = _detect_trunks(level, height)
+    trees = _detect_trunks(level, height)
 
-    # Initialize tree structure & propagation
-    tree_blocks: List[UniTuple(i8, 2)] = []
-    marked_blocks: nbSet(UniTuple(i8, 2)) = set()
+    explore(level, trees, trunk_neighbours, _is_trunk)
+    explore(level, trees, leaf_neighbours, is_leaf)
 
-    trees = [[]]
-    for tree_index, position in enumerate(trunks):
-        tree_index += 1  # Start counter to 1
-        trees.append([])  # instantiate new tree
-        tree_blocks.append((*position, tree_index))  # register trunk
-        marked_blocks.add(position)
-
-    # propagate trees through trunks and leaves (and mushrooms)
-    while tree_blocks:
-        # Get the oldest element in the blocks to process
-        x1, z1, tree_index = tree_blocks.pop(0)  # type: int, int, int
-
-        # add it to the structure of its tree
-        for y1 in range(height[x1, z1]+1, height.upper_height(x1, z1)+1):
-            trees[tree_index].append((x1, y1, z1))
-        values[x1, z1] = tree_index
-
-        # check if neighbours for possible other tree points
-        for x2 in prange(x1 - 1, x1 + 2):
-            for z2 in prange(z1 - 1, z1 + 2):
-                if _in_limits((x2, 0, z2), width, length):
-                    y2 = height.upper_height(x2, z2)
-                    position = (x2, y2, z2)
-                    possible_tree_point = (x2, z2)
-                    if (possible_tree_point not in marked_blocks) and _is_tree(getBlockRelativeAt(level, *position)):
-                        marked_blocks.add(possible_tree_point)
-                        tree_blocks.append((*possible_tree_point, tree_index))
+    for tree_id, tree_blocks in enumerate(trees):
+        for x, _, z in tree_blocks:
+            if values[x, z] is None:
+                values[x, z] = set()
+            values[x, z].add(tree_id)
 
     return values, trees
+
+
+def explore(
+        level: worldLoader.WorldSlice,
+        structure: List[Set[Tuple[int, int, int]]],
+        get_neighbours: Callable,
+        is_structure_element: Callable
+) -> None:
+    positions_to_explore: Dict[Tuple[int, int, int], int] = OrderedDict()
+    explored_positions: Set[Tuple[int, int, int]] = set()
+    tree_id: int
+    group: Set[Tuple[int, int, int]]
+    for tree_id, group in enumerate(structure):
+        positions_to_explore.update({xyz: tree_id for xyz in group})
+        explored_positions.update(group)
+
+    while positions_to_explore:
+        tree_block = next(iter(positions_to_explore))  # retrieve oldest key from position to explore
+        tree_id = positions_to_explore.pop(tree_block)
+        for neighbour in get_neighbours(*tree_block).difference(explored_positions):
+            explored_positions.add(neighbour)
+            # try:
+            block_state: str = getBlockRelativeAt(level, *neighbour)
+            if is_structure_element(block_state):
+                structure[tree_id].add(neighbour)
+                positions_to_explore[neighbour] = tree_id
+            # except IndexError:
+            #     continue
 
 
 @numba.njit(cache=True)
@@ -110,16 +122,17 @@ def _is_trunk(block: str) -> bool:
 
 
 @numba.njit(cache=True)
-def _is_tree(bid: str) -> bool:
-    return _is_trunk(bid) or '_leaves' in bid or 'mushroom_block' in bid
+def is_leaf(block_state: str) -> bool:
+    return '_leaves' in block_state or 'mushroom_block' in block_state
 
 
-# @numba.njit(b1(UniTuple(i8, 3), string, nbSet(UniTuple(i8, 3))))
-# def _neighbours_not_trees(p0: UniTuple(i8, 3), block0: str, trunks0: Set[UniTuple(i8, 3)]):
-#     if block0.startswith("oak") or block0.startswith("birch") or block0.startswith("acacia"):
-#         return True
-#     x, z, y = p0
-#     for dx, dz, dy in [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0)]:
-#         if (x + dx, z + dz, y + dy) in trunks0:
-#             return False
-#     return True
+def trunk_neighbours(x, y, z):
+    wd = BuildArea().width
+    ln = BuildArea().length
+    return set(_ for _ in itertools.product(range(x-1, x+2), range(y, y+2), range(z-1, z+2)) if in_limits(_, wd, ln))
+
+
+def leaf_neighbours(x, y, z):
+    wd = BuildArea().width
+    ln = BuildArea().length
+    return set(_ for _ in itertools.product(range(x-1, x+2), range(y-1, y+2), range(z-1, z+2)) if in_limits(_, wd, ln))

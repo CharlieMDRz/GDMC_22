@@ -4,7 +4,7 @@ from numba import njit, jit
 from numpy.random import choice
 
 from parameters import MAX_INT
-from utils.misc_objects_functions import _in_limits
+from utils.misc_objects_functions import in_limits
 
 
 def a_star(root_point, ending_point, dimensions, cost_function):
@@ -137,7 +137,7 @@ def _exploration_neighbourhood(x, z, width, length):
         for _ in numba.prange(4):
             dx, dz = dz, -dx
             x0, z0 = x+dx, z+dz
-            if _in_limits((x0, 0, z0), width, length):
+            if in_limits((x0, 0, z0), width, length):
                 neighbourhood.add((x0, z0))
     return neighbourhood
 

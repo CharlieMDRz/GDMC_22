@@ -86,11 +86,17 @@ class Point(np.ndarray):
     def asPosition(self):
         return Position(self.x, self.z, self.y)
 
+    def withCoords(self, x=None, z=None, y=None):
+        return Point(x if x else self.x, z if z else self.z, y if y else self.y)
+
 
 class Position(Point):
     """
     Point with integer coordinates, represents a position in the Minecraft world. Holds x, y, z coordinates relative to the building area, that can be converted to MC coords with the xa and za properties
     """
+
+    def withCoords(self, x=None, z=None, y=None):
+        return super().withCoords(x, z, y).view(Position)
 
     def __new__(cls, x, z, y=0, absolute_coords=False):
         if absolute_coords:

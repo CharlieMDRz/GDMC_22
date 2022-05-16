@@ -45,6 +45,9 @@ class RailRoadGenerator(Generator):
                 AREA_STRUCTURE.set(rail_pos - Position(0, 0, 1), BlockAPI.blocks.RedstoneBlock, 1002)
             else:
                 AREA_STRUCTURE.set(rail_pos - Position(0, 0, 1), BlockAPI.blocks.Granite, 1002)
+        for rail_pos in self.__rail_positions:
+            rail_texture = self.get_rail_blockstate(rail_pos, height_map)
+            rail_pos = rail_pos + Position(0, 0, height_map[rail_pos.x, rail_pos.z] + 1)
             AREA_STRUCTURE.set(rail_pos, rail_texture, 1002)
 
     def get_rail_blockstate(self, rail_pos: Position, height_map: np.ndarray):

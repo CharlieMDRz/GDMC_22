@@ -16,7 +16,7 @@ __all__ = [
     'mean',
     'pos_bound',
     'sym_range',
-    '_in_limits',
+    'in_limits',
     'raytrace',
     'Singleton'
 ]
@@ -114,7 +114,7 @@ def sym_range(v, dv, vmax=None):
 
 
 @njit
-def _in_limits(xyz0: Tuple[int, int, int], width, length):
+def in_limits(xyz0: Tuple[int, int, int], width, length):
     x0, y0, z0 = xyz0
     return 0 <= x0 < width and 0 <= z0 < length
 

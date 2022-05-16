@@ -13,7 +13,7 @@ from sklearn.preprocessing import StandardScaler
 from building_seeding.settlement import DistrictCluster, Town
 from terrain import TerrainMaps
 from utils import Point, BuildArea, bernouilli, euclidean, X_ARRAY, Z_ARRAY, Position, PointArray
-from utils.misc_objects_functions import argmax, argmin, _in_limits, Singleton
+from utils.misc_objects_functions import argmax, argmin, in_limits, Singleton
 
 
 class Districts(PointArray):
@@ -223,7 +223,7 @@ class Districts(PointArray):
         while True:
             seed_cluster = np.random.choice(town_centers, p=town_cluster_probs)
             seed: Point = self.seeders[seed_cluster].seed()
-            if _in_limits(seed.coords, self.width, self.length):
+            if in_limits(seed.coords, self.width, self.length):
                 return seed
 
 
