@@ -1,4 +1,5 @@
 import logging
+import traceback
 
 from gdpc import interface
 from numpy import zeros, int32
@@ -34,15 +35,16 @@ class Structure(BoundingBox):
             pos: Point
             absolute_point = pos
             relative_point = pos - self.origin
-        if absolute_point.coords not in self:
+        if absolute_point.xyz not in self:
             logging.error(f"Trying to set block outside build area ! @{absolute_point}")
+            traceback.print_stack()
             return
-        prev_priority = self.__priority[relative_point.coords]
+        prev_priority = self.__priority[relative_point.xyz]
 
         if (priority > prev_priority) or (force and priority == prev_priority):
-            x, y, z = absolute_point.coords
+            x, y, z = absolute_point.xyz
             self.interface.placeBlock(x, y, z, block_state, **kwargs)
-            self.__priority[relative_point.coords] = priority
+            self.__priority[relative_point.xyz] = priority
 
     def fill(self, box: BoundingBox, blockstate: str, priority: int = 1, force=False, **kwargs):
         for x, y, z, in box.positions:

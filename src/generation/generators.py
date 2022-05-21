@@ -519,7 +519,7 @@ def place_water_source(x, y, z, protected_points=None):
     p = Point(x, z, y)
     for dir in Direction.cardinal_directions(False):  # type: Direction
         dpos = p + dir.value
-        if direct_interface.getBlock(*dpos.coords).split(':')[-1] not in ground_blocks:
+        if direct_interface.getBlock(*dpos.xyz).split(':')[-1] not in ground_blocks:
             state = f"spruce_trapdoor[facing={dir.name.lower()}, half=bottom, open=true]"
             AREA_STRUCTURE.set(dpos, state, 5)
             if protected_points:
@@ -548,7 +548,7 @@ def place_sign(position: Point, material: str, direction: Point, **kwargs):
     :return: nothing
     """
     if 'wall' in material:
-        state = material + f"facing={Direction.of(*position.coords).name.lower()}" + "{"
+        state = material + f"facing={Direction.of(*position.xyz).name.lower()}" + "{"
     else:
         state = material + f"[rotation={sign_rotation_for_direction(direction)}]" + "{"
     state += f'Color: "{kwargs.get("Color", "black")}", '

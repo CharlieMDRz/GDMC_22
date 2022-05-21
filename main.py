@@ -43,6 +43,8 @@ def main(districts=None, seeding=None, parcels=None, generation=None, visualize=
         if districts:
             districts(settlement, visualize=visualize)
         else: return
+        settlement.init_road_network()
+        settlement.compute_rail_network()
 
         if seeding:
             # define buildings list and seed them
@@ -136,7 +138,7 @@ def get_generation_options(step_list: List[str]) -> Dict[str, Union[Callable, No
         step, step_variation = step[0], step[1:]
         assert step in _step_to_option
         gen_step = _step_to_option[step]
-        print(f"Selecting {gen_step} algorithm...")
+        logging.info(f"Selecting {gen_step} algorithm...")
         func, desc = _steps_dictionary[step][step_variation]
         _gen_options[gen_step] = func
         logging.info(f"\tWill use '{func.__name__}': {desc}")

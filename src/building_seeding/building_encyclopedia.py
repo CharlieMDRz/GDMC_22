@@ -25,6 +25,9 @@ BUILDING_ENCYCLOPEDIA = {
             "ghost-crop": (20, 25, 100),
             "ghost-windmill": (20, 25, 100),
 
+            'station-ghost': (-1, 0, 1),
+            'station-station': (75, 120, 200),
+
             "house-wood_tower": (16, 24, 40),
             "crop-wood_tower": (8, 16, 30),
             "windmill-wood_tower": (12, 20, 35),
@@ -49,6 +52,7 @@ BUILDING_ENCYCLOPEDIA = {
         "Accessibility": {
             "house": (6, 11, 30),
             "crop": (6, 20, 40),
+            'station': (6, 24, 100),
             "windmill": (6, 12, 18)
         },
 
@@ -57,6 +61,7 @@ BUILDING_ENCYCLOPEDIA = {
         "Density": {
             "house": (-1, 0, 3),
             "crop": (.5, 1.5, 4),
+            'station': (-1, .3, 1),
             "windmill": (1, 2, 4),
             "wood_tower": (0, 0.35, 1.2),
             "stone_tower": (-1, 0.2, 1),
@@ -65,6 +70,7 @@ BUILDING_ENCYCLOPEDIA = {
         "Altitude": {
             "house": (60, 68, 90),
             "crop": (65, 70, 80),
+            'station': (60, 70, 100),
             "windmill": (65, 75, 95),
             "wood_tower": (62, 75, 90),
             "stone_tower": (68, 80, 95)
@@ -75,6 +81,7 @@ BUILDING_ENCYCLOPEDIA = {
         },
 
         "RiverDistance": {
+            'station': (10, 150),
             "house": (5, 120),
             "crop": (7, 80),
             "windmill": (12, 150),
@@ -83,6 +90,7 @@ BUILDING_ENCYCLOPEDIA = {
         },
 
         "OceanDistance": {
+            'station': (30, 200),
             "house": (10, 150),
             "crop": (30, 200),
             "windmill": (25, 200),
@@ -91,6 +99,7 @@ BUILDING_ENCYCLOPEDIA = {
         },
 
         "LavaObstacle": {
+            'station': (5, 15),
             "house": (10, 20),
             "crop": (8, 15),
             "windmill": (10, 25),
@@ -104,6 +113,7 @@ BUILDING_ENCYCLOPEDIA = {
 
         # (accessibility, sociability, density, altitude, pure_water, sea_water, lava, steepness, temperature, trees)
         "Weighting_factors": {
+            'default': (2, 3, 3, 1, 1, 1, 1, 5, 1, 1),
             "house": (1, 3, 3, 0, 1, 1, 1, 1, 1, 1),
             "crop": (1, 3, 2, 1, 2, 0, 1, 3, 1, 1),
             "windmill": (2, 4, 3, 1, 0, 0, 1, 2, 1, 1)

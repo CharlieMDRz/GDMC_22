@@ -223,7 +223,7 @@ class Districts(PointArray):
         while True:
             seed_cluster = np.random.choice(town_centers, p=town_cluster_probs)
             seed: Point = self.seeders[seed_cluster].seed()
-            if in_limits(seed.coords, self.width, self.length):
+            if in_limits(seed.xyz, self.width, self.length):
                 return seed
 
 

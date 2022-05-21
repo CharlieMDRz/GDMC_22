@@ -51,10 +51,10 @@ class Point(np.ndarray):
         return True
 
     def __hash__(self):
-        return hash(self.coords)
+        return hash(self.xyz)
 
     @property
-    def coords(self):
+    def xyz(self):
         return self.x, self.y, self.z
 
     @property
@@ -123,6 +123,9 @@ class Position(Point):
         """
         return self.z + BuildArea().z
 
+    @property
+    def abs_xyz(self):
+        return self.abs_x, self.y, self.abs_z
 
 
 def euclidean(p1: Point, p2: Point) -> float:
@@ -130,11 +133,11 @@ def euclidean(p1: Point, p2: Point) -> float:
 
 
 def manhattan(p1: Point, p2: Point) -> float:
-    return sum(abs(p2 - p1).coords)
+    return sum(abs(p2 - p1).xyz)
 
 
 def absolute_distance(p1: Point, p2: Point) -> float:
-    return max(abs(p2 - p1).coords)
+    return max(abs(p2 - p1).xyz)
 
 
 class Direction(Enum):

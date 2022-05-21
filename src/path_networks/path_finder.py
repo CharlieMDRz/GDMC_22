@@ -152,22 +152,23 @@ class PathFinder:
 
         node = source
 
-        p = mp.Process(target=time.sleep, args=(self.ASTAR_TIME_LIMIT,))
-        p.start()
+        # p = mp.Process(target=time.sleep, args=(self.ASTAR_TIME_LIMIT,))
+        # p.start()
 
-        while node != target and neighbours and p.is_alive():
+        # while node != target and neighbours and p.is_alive():
+        while node != target and neighbours:
 
             # pick new exploration point -> point closer to target
             node = neighbours.pop(0)
 
             # explore neighbours to this point
-            for neighbour in self.__neighbourhood(node, 1):
+            for neighbour in self.__path_cost_graph.getNeighbours(node, parent=predecessor_map[node.xz], target=target):
                 update_distance(node, neighbour)
 
-        if p.is_alive():
-            p.terminate()
-        else:
-            p.close()
+        # if p.is_alive():
+        #     p.terminate()
+        # else:
+        #     p.close()
 
         if predecessor_map[target.x, target.z]:
             return path_to_dest()

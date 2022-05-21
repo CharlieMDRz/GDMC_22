@@ -3,6 +3,7 @@ from typing import List, Set
 
 import numpy as np
 
+from .railway import TrainStation
 from generation import Generator
 from generation.structure import AREA_STRUCTURE
 from utils import TransformBox, Position, BlockAPI, clear_tree_at, Point, mean, manhattan, Direction
@@ -13,10 +14,11 @@ from utils.block_utils import build_block_state
 class RailRoadGenerator(Generator):
     NEIGHBOUR_GRAPH = GridGraph(False)
 
-    def __init__(self, tracks_array, **kwargs):
+    def __init__(self, tracks_array, stations, **kwargs):
         super().__init__(TransformBox(), **kwargs)
         self.__is_path: np.ndarray[bool] = tracks_array
         self.__track_positions = {Position(*xz) for xz in zip(*np.where(tracks_array))}
+        self.__stations: List[TrainStation] = stations
 
         padded_path_array = np.pad(self.__is_path, 1).astype(int) * 2  # 2 -> spacing between rails
         padded_rail_array = np.zeros(padded_path_array.shape)
@@ -37,7 +39,7 @@ class RailRoadGenerator(Generator):
             rail_pos = rail_pos + Position(0, 0, height_map[rail_pos.x, rail_pos.z] + 1)
             clear_tree_at(level, Point(rail_pos.abs_x, rail_pos.abs_z))
             x, y, z = rail_pos.abs_x, rail_pos.y, rail_pos.abs_z
-            print(x, y, z, rail_texture)
+            logging.debug(x, y, z, rail_texture)
             ballast_box, air_box = TransformBox((x - 1, y - 1, z - 1), (3, 4, 3)).split(dy=1)
             AREA_STRUCTURE.fill(ballast_box, BlockAPI.blocks.Granite, 1000)
             AREA_STRUCTURE.fill(air_box, BlockAPI.blocks.Air, 1001)
@@ -61,15 +63,15 @@ class RailRoadGenerator(Generator):
             try:
                 # if one neighbour is higher, builds sloped powered rail
                 ascending_neighbour = next(_ for _ in neighbours if height_map[rail_pos.xz] < height_map[_.xz])
-                ascending_direction: Direction = Direction.of(*(ascending_neighbour - rail_pos).coords)
+                ascending_direction: Direction = Direction.of(*(ascending_neighbour - rail_pos).xyz)
                 return build_block_state(BlockAPI.blocks.PoweredRail, shape=f"ascending_{ascending_direction.name.lower()}")
             except StopIteration:
-                rail_direction: Direction = Direction.of(*(neighbours.pop() - rail_pos).coords)
+                rail_direction: Direction = Direction.of(*(neighbours.pop() - rail_pos).xyz)
                 shape = 'north_south' if rail_direction in [Direction.North, Direction.South] else 'east_west'
                 block = BlockAPI.blocks.PoweredRail if rail_pos in self.__accelerators else BlockAPI.blocks.Rail
                 return build_block_state(block, shape=shape)
         else:
-            neighbour_dirs = [Direction.of(*(neighbour - rail_pos).coords).name.lower() for neighbour in neighbours]
+            neighbour_dirs = [Direction.of(*(neighbour - rail_pos).xyz).name.lower() for neighbour in neighbours]
             if neighbour_dirs[1] in ['north', 'south']:
                 neighbour_dirs = reversed(neighbour_dirs)  # north/south first, east/west next
             return build_block_state(BlockAPI.blocks.Rail, shape='_'.join(neighbour_dirs))
@@ -78,6 +80,10 @@ class RailRoadGenerator(Generator):
         railways: List[Set[Position]]  # rail points, grouped by connected line
         section_list: List[List[Position]]  # alternates curves and straight lines (starts with a curve)
         height_list: List[float]  # list of heights for each section of section_list
+        connector_heights = {}
+        for station in self.__stations:
+            connector_heights.update({conn: height_map[station.position.xz] for conn in station.connectors})
+        fixed_height_sections = set()
 
         def is_in_straight_section(point):
             try:
@@ -123,18 +129,31 @@ class RailRoadGenerator(Generator):
         def update_heights() -> None:
             section_count = len(section_list)
             for curve_index in range(0, section_count, 2):
+                if curve_index in fixed_height_sections:
+                    continue
                 curve_height = height_list[curve_index]
+
+                section_length = sum(len(section_list[i % section_count]) for i in range(curve_index - 1, curve_index + 2))
 
                 for delta_index in (-2, 2):
                     neighbour_curve_index = (curve_index + delta_index) % section_count
                     neighbour_curve_height = height_list[neighbour_curve_index]
                     elevation = (neighbour_curve_height - curve_height)  # if neighbour is higher, elevation is >= 0
-                    height_list[curve_index] += elevation / len(section_list[curve_index])  # if elevation is >= 0, curve rises
+                    height_list[curve_index] += elevation / section_length  # if elevation is >= 0, curve rises
 
         rail_height_map = np.full(height_map.shape, 256)
         railways = connected_components(self.__rail_positions)
         for section_list in map(split_railway_in_lines_and_curves, railways):
             height_list = [mean(height_map[p.xz] for p in sec) for sec in section_list]
+
+            for sec_index, sec in enumerate(section_list):
+                if min(min(manhattan(p, c) for p in sec) for c in connector_heights) == 1:
+                    conn = next(c for c in connector_heights if min(manhattan(p, c) for p in sec) == 1)
+                    sec_height = height_map[conn.xz]
+                    for neigh_sec_index in range(sec_index - 1, sec_index + 2):
+                        neigh_sec_index %= len(section_list)
+                        height_list[neigh_sec_index] = sec_height
+                        fixed_height_sections.add(neigh_sec_index)
 
             while not valid_config():
                 update_heights()

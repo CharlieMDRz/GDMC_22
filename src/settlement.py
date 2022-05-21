@@ -9,6 +9,8 @@ import numpy as np
 from sortedcontainers import SortedList
 
 from building_seeding import Districts, Parcel, VillageSkeleton, BuildingType, MaskedParcel
+from building_seeding.district.districts import density_one_district
+from building_seeding.interest.interest import InterestMap
 from generation.generators import place_sign
 from generation.structure import AREA_STRUCTURE
 from parameters import MAX_HEIGHT, BUILDING_HEIGHT_SPREAD, TERRAFORM_ITERATIONS, AVERAGE_PARCEL_SIZE
@@ -17,6 +19,7 @@ from path_networks.rail_network import compute_train_line
 from terrain import TerrainMaps
 from utils import *
 from utils.algorithms import min_spanning_tree, tree_distance
+from utils.algorithms.graphs import Graph
 
 MEAN_ROAD_COVERED_SURFACE = 64  # to compute number of roads, max 1 external connexion per 1/64 of the settlement size
 SETTLEMENT_ACCESS_DIST = 25  # maximum distance from settlement center to road net
@@ -26,6 +29,7 @@ class Settlement:
     """
     Intermediate project: generate a realistic village on a flat terrain
     """
+
     def __init__(self, maps):
         # type: (TerrainMaps) -> Settlement
         self._maps = maps  # type: TerrainMaps
@@ -52,33 +56,29 @@ class Settlement:
 
     def build_districts(self, **kwargs):
         self.districts.build(self._maps, **kwargs)
-        district_centers = self.districts.district_centers
+        # mark town centers
+        town_centers = {_.center for _ in self.districts.towns.values()}
+        for town_center in town_centers:
+            self._parcels.append(Parcel(town_center, BuildingType.ghost, self._maps))
 
-        # init road net
+    def init_road_network(self):
+        # Connect districts
+        district_centers = self.districts.district_centers
         if self.districts.n_districts >= 2:
             main_roads = min_spanning_tree(district_centers)
             for p1, p2 in main_roads:
                 self._road_network.create_road(p1.asPosition, p2.asPosition)
         else:
             self._road_network.create_road(district_centers[0], district_centers[0])
-        self.init_road_network()
 
-        town_centers = {t.center for t in self.districts.towns.values()}
-        compute_train_line(self._maps.rail_network, town_centers)
-
-        # mark town centers
-        for town_center in town_centers:
-            self._parcels.append(Parcel(town_center, BuildingType.ghost, self._maps))
-
-    def init_road_network(self):
         max_road_count = max(1, min(self.limits.width, self.limits.length) // MEAN_ROAD_COVERED_SURFACE)
         road_count = min(np.random.geometric(1. / max_road_count), max_road_count * 3 // 2)
         logging.debug('New settlement will have {} external connections B)'.format(road_count))
-        out_connections = [Point(self.limits.width//2, self.limits.length//2)]
+        out_connections = [Point(self.limits.width // 2, self.limits.length // 2)]
 
         for road_id in range(road_count):
-            min_distance_to_roads = min(self.limits.width, self.limits.length) / (road_id+1)
-            logging.debug('Generating road #{}'.format(road_id+1))
+            min_distance_to_roads = min(self.limits.width, self.limits.length) / (road_id + 1)
+            logging.debug('Generating road #{}'.format(road_id + 1))
             # generate new border point far enough from existing points
             while True:
                 new_road_point = self.__random_border_point()
@@ -121,7 +121,7 @@ class Settlement:
             # extend expendables parcels from smaller to larger while there still are some
             parcel = expendable_parcels.pop(0)
             if parcel.entry_point != parcel.center:
-                road_dir = Direction.of(*(parcel.entry_point - parcel.center).coords)
+                road_dir = Direction.of(*(parcel.entry_point - parcel.center).xyz)
                 lateral_dir = road_dir.rotate() if bernouilli() else -road_dir.rotate()
 
                 priority_directions = [road_dir, lateral_dir, -lateral_dir, -road_dir]
@@ -289,4 +289,42 @@ class Settlement:
                     nom_ville = town_centers[point].name
                     place_sign(pos, BlockAPI.blocks.OakSign, sign_direction, Text1=nom_ville, Text2="--------", Text3=f"{neighbour_town_name}", Text4=f"<--- {dist}m")
                 else:
-                    place_sign(pos, BlockAPI.blocks.OakSign, sign_direction, Text2=f"{neighbour_town_name}", Text3=f"<--- {dist}m")
+                    place_sign(pos, BlockAPI.blocks.OakSign, sign_direction, Text2=f"{neighbour_town_name}",
+                               Text3=f"<--- {dist}m")
+
+    def compute_rail_network(self):
+        town_centers = {t.center for t in self.districts.towns.values()}
+        districts: Districts = self.districts
+        station_parcels: List[Parcel] = [Parcel(Position(0, 0), BuildingType.ghost, self._maps)]
+
+        # Place stations
+        for town_index in districts.town_indexes:
+            # Compute town density to seed station position
+            center = districts.towns[town_index].center
+            dist = districts.seeders[town_index]
+            sig_x = dist.stdev_x
+            sig_z = dist.stdev_z
+            district_density = density_one_district((center.x, center.z), (sig_x, sig_z))
+            station_interest = InterestMap(BuildingType.station, "Flat_scenario", self._maps, district_density)
+            station_interest.update(station_parcels)  # take previous stations into account
+            station_position = station_interest.get_seed()
+            if station_position is not None:
+                station_parcels.append(Parcel(station_position, BuildingType.station, self._maps))
+        station_parcels.pop(0)
+        station_positions: List[Position] = [parcel.position for parcel in station_parcels]
+
+        # Compute station connections
+        rail_sections = min_spanning_tree(station_positions)
+
+        network_graph: Graph = Graph(False)  # transform MST in graph
+        for section in rail_sections:
+            network_graph.addEdge(*section)
+
+        for station in network_graph.nodes:  # register each station
+            station_edges: List[Point] = [(station - neighbour) for neighbour in network_graph.getNeighbours(station)]
+            station_dir_vec: Point = sum(abs(vec) for vec in station_edges)
+            station_dir: Direction = Direction.of(*station_dir_vec.xyz)
+            self._maps.rail_network.add_station(station, station_dir)
+
+        for station, neighbour in rail_sections:
+            self._maps.rail_network.add_edge(station.asPosition, neighbour.asPosition)

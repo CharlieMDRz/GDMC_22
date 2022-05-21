@@ -20,6 +20,7 @@ class BuildingType(Enum):
     windmill = WindmillGenerator
     structure = Generator
     cave = MineGenerator
+    station = None
 
     def __str__(self):
         return "Building type {}".format(self.name)

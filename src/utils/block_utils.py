@@ -878,7 +878,7 @@ def symmetric_copy(origin: Point, size: Point, destination: Point, x_sym=False, 
         destination_y = destination.y + ((size.y - dy) if y_sym else dy)
         destination_z = destination.z + ((size.z - dz) if z_sym else dz)
 
-        block = direct_interface.getBlock(*(origin + dp).coords, True)
+        block = direct_interface.getBlock(*(origin + dp).xyz, True)
         if x_sym:
             block = block.replace("west", "tmp").replace("east", "west").replace("tmp", "east")
         if y_sym:
