@@ -4,7 +4,6 @@ from gdpc import worldLoader
 
 from generation.structure import AREA_STRUCTURE
 from terrain import EntityManager
-from path_networks import RoadNetwork, RailNetwork
 from terrain.biomes import BiomeMap
 from terrain.fluid_map import FluidMap
 from terrain.height_map import HeightMap
@@ -18,6 +17,7 @@ class TerrainMaps:
     """
 
     def __init__(self, level: worldLoader.WorldSlice, area: BuildArea):
+        from path_networks import RoadNetwork, RailNetwork
         if area.width < level.heightmaps["WORLD_SURFACE"].shape[0]:
             for k, hm in level.heightmaps.items():
                 level.heightmaps[k] = hm[:-1, :-1]
@@ -88,7 +88,6 @@ class TerrainMaps:
         """
         Undo all modifications to the terrain for debug purposes
         """
-        from utils import setBlock, Point
         dump()
         current_terrain = TerrainMaps.request(self.area.json)
         old_level = self.level

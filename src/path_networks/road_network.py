@@ -10,8 +10,10 @@ from generation.generators import *
 from path_networks.road_generator import RoadGenerator
 from parameters import *
 from utils import Point, euclidean
+from utils.algorithms.fast_astar import fast_a_star
 from utils.algorithms.graphs import GridGraph
 from terrain.obstacle_map import ObstacleMap
+
 
 class RoadNetwork(metaclass=Singleton):
     """
@@ -199,8 +201,10 @@ class RoadNetwork(metaclass=Singleton):
         self.nodes.add(target.asPosition)
 
         _t1, cycles = time.time(), []
-        for node in sorted(self.nodes, key=lambda n: euclidean(n, target))[1:min(CYCLE_ALTERNATIVES, len(self.nodes))]:
-            old_path, new_path = self.cycle_creation_condition(node, target)
+        key = lambda n: euclidean(n, target)
+        close_neighbours = [n for n in self.nodes if (MIN_DISTANCE_CYCLE <= key(n) <= MAX_DISTANCE_CYCLE)]
+        for node in sorted(close_neighbours, key=key)[:min(CYCLE_ALTERNATIVES, len(close_neighbours))]:
+            old_path, new_path = self.try_to_create_direct_path(node, target)
             if new_path:
                 new_path = self.create_road(path=new_path)
                 cycles.append(set(old_path).union(set(new_path)))
@@ -297,36 +301,7 @@ class RoadNetwork(metaclass=Singleton):
             update_maps_info_at(clst_neighbor)
             update_distances(clst_neighbor)
 
-    def a_star(self, root_point, ending_point, cost_function, timer=False):
-        # type: (Point, Point, Callable[[Point, Point], int], bool) -> List[Point]
-        """
-        Parameters
-        ----------
-        root_point path origin
-        ending_point path destination
-        cost_function (RoadNetwork, Point, Point) -> int
-
-        Returns
-        -------
-        best first path from root_point to ending_point if any exists
-        """
-        from utils.algorithms import a_star
-        if root_point == ending_point:
-            return [root_point]
-        t0 = time.time()
-        try:
-            tuple_path = a_star((root_point.x, root_point.z), (ending_point.x, ending_point.z), (self.width, self.length),
-                                lambda u, v: cost_function(Position(u[0], u[1]), Position(v[0], v[1])))
-            path = [Point(u, v) for u, v in tuple_path]
-        except SystemError or KeyError or ValueError:
-            return []
-        if timer:
-            t0 = time.time() - t0 + .001
-            print(f"Fast a*'ed a {len(path)} blocks road in {int(t0) if t0 > 1 else t0} seconds, "
-                  f"avg: {int(len(path) / t0)}mps")
-        return path
-
-    def cycle_creation_condition(self, node1: Point, node2: Point) -> (List[Point], List[Point]):
+    def try_to_create_direct_path(self, node1: Point, node2: Point) -> (List[Point], List[Point]):
         """
         Evaluates whether it's useful to create a new road between two road points
         :param node1:
@@ -334,14 +309,11 @@ class RoadNetwork(metaclass=Singleton):
         :return:
         """
         straight_dist = euclidean(node1, node2)
-        if not (MIN_DISTANCE_CYCLE <= straight_dist <= MAX_DISTANCE_CYCLE):
-            return [], []
-
-        existing_path = self.a_star(node1, node2, road_only_cost)
+        existing_path = fast_a_star(node1, node2, road_only_cost)
         current_dist = len(existing_path)
         if current_dist / straight_dist < MIN_CYCLE_GAIN:
             return existing_path, []
-        straight_path = self.a_star(node1, node2, road_build_cost)
+        straight_path = fast_a_star(node1, node2, road_build_cost)
         straight_dist = len(straight_path)
         if straight_dist and current_dist / straight_dist >= MIN_CYCLE_GAIN:
             return existing_path, straight_path
@@ -373,7 +345,7 @@ def road_build_cost(src_point, dest_point):
     is_dest_obstacle |= network.terrain.fluid_map.is_lava(dest_point, margin=MIN_DIST_TO_LAVA)
     if is_dest_obstacle:
         # return MAX_INT
-        return 100
+        return 100 * scale
 
     # Then, terrain specific costs, use cache
     if (src_point, dest_point) not in road_build_cache:
@@ -383,18 +355,20 @@ def road_build_cost(src_point, dest_point):
                 return scale * BRIDGE_COST  # bridge continuation
             return BRIDGE_UNIT_COST + (scale - 1) * BRIDGE_COST  # bridge creation
 
+        # additional cost for slopes
+        direction: Point = (dest_point - src_point).unit
+        hm = network.terrain.height_map
+        steepness: Point = hm.steepness(src_point, norm=False)
+        elevation = abs(steepness.dot(direction))
+        elevation += abs(steepness.dot(Point(-direction.z, direction.x))) / 3
+        # cost += scale * elevation  # quadratic cost over slopes
+        cost *= (1 + elevation) ** 2  # quadratic cost over slopes
+
         # discount to get roads closer to water
         src_water = network.terrain.fluid_map.water_distance(src_point)
         dest_water = network.terrain.fluid_map.water_distance(dest_point)
         if 2.5 * MIN_DIST_TO_RIVER >= dest_water > MIN_DIST_TO_RIVER:
             cost += (dest_water - src_water)
-
-        # additional cost for slopes
-        direction: Point = (dest_point - src_point).unit
-        hm = network.terrain.height_map
-        steepness: Point = (hm.steepness(src_point, norm=False) + hm.steepness(dest_point, norm=False)) / 2
-        elevation = abs(steepness.dot(direction))
-        cost += (1 + elevation) ** 2 - 1  # quadratic cost over slopes
 
         # discount to cross rail tracks
         from path_networks import RailNetwork

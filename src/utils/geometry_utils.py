@@ -133,11 +133,11 @@ def euclidean(p1: Point, p2: Point) -> float:
 
 
 def manhattan(p1: Point, p2: Point) -> float:
-    return sum(abs(p2 - p1).xyz)
+    return sum(abs(p2 - p1))
 
 
 def absolute_distance(p1: Point, p2: Point) -> float:
-    return max(abs(p2 - p1).xyz)
+    return max(abs(p2 - p1))
 
 
 class Direction(Enum):

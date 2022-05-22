@@ -4,7 +4,18 @@ from numba import njit, jit
 from numpy.random import choice
 
 from parameters import MAX_INT
+from utils import Position, BuildArea
 from utils.misc_objects_functions import in_limits
+
+
+def fast_a_star(source: Position, target: Position, cost_function):
+    def tuple_cost_func(xz1, xz2):
+        return cost_function(Position(*xz1), Position(*xz2))
+
+    shape = (BuildArea().width, BuildArea().length)
+
+    xz_path = a_star(source.xz, target.xz, shape, tuple_cost_func)
+    return [Position(*xz) for xz in xz_path]
 
 
 def a_star(root_point, ending_point, dimensions, cost_function):
@@ -23,15 +34,11 @@ def a_star(root_point, ending_point, dimensions, cost_function):
 
     clst_neighbor = root_point
     n_steps = 0
-    max_step = max(1000, 10 * _heuristic(root_point, ending_point))
     while neighbours and (min(distance_map[n] for n in neighbours) < MAX_INT) and (clst_neighbor != ending_point):
         n_steps += 1
         clst_neighbor = _closest_neighbor(astar_env, ending_point)
         neighbours.remove(clst_neighbor)
         _update_distances(astar_env + (cost_function,), dimensions, clst_neighbor)
-
-        if n_steps >= max_step:
-            break
 
     if clst_neighbor != ending_point:
         return []

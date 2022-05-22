@@ -56,7 +56,6 @@ class RailConnector(Position):
     def __new__(cls, position):
         pos = Position.__new__(cls, position.x, position.z, position.y)
         pos.neighbours = {}
-        pos.x_orientation = False
         return pos
 
     def branch(self, new_edge):
@@ -73,7 +72,6 @@ class RailConnector(Position):
                 self.neighbours.clear()
                 self.neighbours[-edge_dir] = old_edge
         self.neighbours[edge_dir] = new_edge
-        self.__compute_orientation()
 
     def other_end(self, end):
         ends = list(self.neighbours.values())
@@ -86,17 +84,6 @@ class RailConnector(Position):
     @property
     def is_full(self):
         return len(self.neighbours) == self.CAPACITY
-
-    @property
-    def nodes(self):
-        dp = Position(1, 0) if self.x_orientation else Position(0, 1)
-        return self - dp, self + dp
-
-    def __compute_orientation(self):
-        if Direction.North in self.neighbours.keys() or Direction.South in self.neighbours.keys():
-            self.x_orientation = True
-        elif Direction.East in self.neighbours.keys() or Direction.West in self.neighbours.keys():
-            self.x_orientation = False
 
     def direction(self, neighbour) -> Direction:
         assert neighbour in self.neighbours.values()  # todo: sometimes fail
@@ -302,7 +289,7 @@ class TrainStation(Generator):
             if len(self.connectors) == 2:
                 return None  # todo: handle stations with more than 2 neighbours
             self.__create_connectors()
-        station_conn: RailConnector = argmin([conn for conn in self.connectors if not conn.is_full], lambda c: manhattan(c, station))
+        station_conn: RailConnector = argmin([conn for conn in self.connectors if not conn.is_full], lambda c: manhattan(c + (c-self.position)*2, station))
         return station_conn
 
     def __create_connectors(self):

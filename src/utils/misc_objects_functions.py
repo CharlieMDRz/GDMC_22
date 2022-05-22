@@ -3,9 +3,11 @@ from os.path import realpath, sep
 from random import random
 from typing import Tuple, Iterable
 
+import cv2
+from matplotlib import pyplot as plt
 from numba import njit
+import numpy as np
 from sortedcontainers import SortedList
-
 
 __all__ = [
     'bernouilli',
@@ -14,6 +16,7 @@ __all__ = [
     'argmax',
     'index_argmin',
     'mean',
+    'plot_map',
     'pos_bound',
     'sym_range',
     'in_limits',
@@ -36,6 +39,8 @@ def get_project_path():
 def argmin(values, key=None):
     if type(values) != list:
         values = list(values)
+    if not values:
+        return None
     if key is None:
         return index_argmin(values)
 
@@ -213,6 +218,20 @@ class Singleton(type):
         if cls not in cls._instances:
             cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
         return cls._instances[cls]
+
+
+def plot_map(array, do_normalize=True):
+    fig, ax = plt.subplots()
+
+    def normalize(array):
+        """**Normalize the array to contain values from 0 to 1**."""
+        return (array - array.min()) / (array.max() - array.min())
+
+    if do_normalize:
+        array = (normalize(array) * 255).astype(np.uint8)
+    plt_image = cv2.cvtColor(array, cv2.COLOR_BGR2RGB)
+    ax.imshow(plt_image)
+    return ax
 
 
 if __name__ == '__main__':

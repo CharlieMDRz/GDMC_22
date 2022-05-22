@@ -23,12 +23,8 @@ class HeightMap(PointArray):
         # uses absolute coordinates
         obj.__origin = Point(area.x, area.z)
 
-        steepness_x = cv2.Scharr(obj.astype(np.uint8), 5, 1, 0)
-        steepness_z = cv2.Scharr(obj.astype(np.uint8), 5, 0, 1)
-
-        for stp in (steepness_x, steepness_z):
-            stp[stp >= 0] **= .5
-            stp[stp < 0] = -(-stp[stp < 0]) ** .5
+        steepness_z = cv2.Scharr(obj.astype(np.uint8), 5, 1, 0) / (2 ** 5)  # normalizer
+        steepness_x = cv2.Scharr(obj.astype(np.uint8), 5, 0, 1) / (2 ** 5)
 
         obj.__steepness_x = cv2.GaussianBlur(steepness_x, (15, 15), 0)
         obj.__steepness_z = cv2.GaussianBlur(steepness_z, (15, 15), 0)

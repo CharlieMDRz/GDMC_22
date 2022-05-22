@@ -5,6 +5,7 @@ from numpy import full
 from sortedcontainers import SortedList
 
 from parameters import MAX_INT
+from . import a_star
 from .road_network import RoadNetwork, road_build_cost as cost_function
 from utils import BuildArea, argmin, euclidean, Position
 from utils.algorithms.graphs import Graph, Tree, dijkstra
@@ -53,6 +54,14 @@ class PathFinder:
             rough_path = [source, target]
         else:
             rough_path = [source] + sourceTargetPath[1: -1] + [target]
+
+        # Clean up rough angles
+        i = 1
+        while i < len(rough_path) - 1:
+            if (rough_path[i+1] - rough_path[i]).dot(rough_path[i] - rough_path[i-1]) == 0:
+                rough_path.pop(i)
+            else:
+                i += 1
         return rough_path
 
     def getPath(self, source: Position, target: Position):
@@ -105,7 +114,7 @@ class PathFinder:
             """
             l = [0]
             for i in range(len(rough_path) - 1, 0, -1):
-                l.append(l[-1] + euclidean(rough_path[i], rough_path[i - 1]))
+                l.append(l[-1] + cost_function(rough_path[i], rough_path[i - 1]))
             return list(reversed(l))
 
         def init():
@@ -122,57 +131,14 @@ class PathFinder:
                 _id = argmin(map(lambda p: euclidean(_pos, p), rough_path))  # index of the closest reference point
                 # heuristic = distance towards this point + heuristic starting in this point
                 if _id >= len(rough_path) - 2:
-                    heuristic_map[_pos.x, _pos.z] = euclidean(_pos, target)
+                    heuristic_map[_pos.xz] = cost_function(_pos, target)
                 else:
-                    heuristic_map[_pos.x, _pos.z] = euclidean(_pos, rough_path[_id + 2]) + cumsum[_id + 2]
-            return heuristic_map[_pos.x, _pos.z]
-
-        def update_distance(_node, _neigh):
-            cost = cost_function(_node, _neigh)
-            if cost >= MAX_INT:
-                return
-            old_dist = distance_map[_neigh.x, _neigh.z]
-            new_dist = distance_map[_node.x, _node.z] + cost
-            if new_dist < old_dist:
-                neighbours.add(_neigh)
-                distance_map[_neigh.x, _neigh.z] = new_dist
-                predecessor_map[_neigh.x, _neigh.z] = _node
-
-        def path_to_dest():
-            _node = target
-            _path = [_node]
-            while _node != source:
-                _node = predecessor_map[_node.xz]
-                _path.append(_node)
-            return list(reversed(_path))
+                    heuristic_map[_pos.xz] = cost_function(_pos, rough_path[_id + 2]) + cumsum[_id + 2]
+            return heuristic_map[_pos.xz]
 
         cumsum = build_cumsum()
         distance_map, predecessor_map, heuristic_map = init()
-        neighbours = SortedList([source], lambda pos: distance_map[pos.x, pos.z] + heuristic(pos))
-
-        node = source
-
-        # p = mp.Process(target=time.sleep, args=(self.ASTAR_TIME_LIMIT,))
-        # p.start()
-
-        # while node != target and neighbours and p.is_alive():
-        while node != target and neighbours:
-
-            # pick new exploration point -> point closer to target
-            node = neighbours.pop(0)
-
-            # explore neighbours to this point
-            for neighbour in self.__path_cost_graph.getNeighbours(node, parent=predecessor_map[node.xz], target=target):
-                update_distance(node, neighbour)
-
-        # if p.is_alive():
-        #     p.terminate()
-        # else:
-        #     p.close()
-
-        if predecessor_map[target.x, target.z]:
-            return path_to_dest()
-        return []
+        return a_star(source, target, self.__path_cost_graph, heuristic)
 
     @property
     def gwidth(self):

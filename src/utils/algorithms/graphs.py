@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple, Set, Callable
+from typing import Dict, List, Tuple, Set, Callable, Union
 
 import numpy as np
 from sortedcontainers import SortedList
@@ -11,7 +11,8 @@ __all__ = [
     'connected_components',
     'Graph',
     'GridGraph',
-    'point_set_as_array'
+    'point_set_as_array',
+    'Tree'
 ]
 
 
@@ -47,17 +48,20 @@ class Graph:
         node, neigh = item
         return self.__adjacency_lists[node][neigh]
 
+    def __contains__(self, item):
+        return item in self.__adjacency_lists
+
 
 class Tree(Graph):
     def __init__(self):
         super().__init__(True)
         self.__parent_node: Dict[Point, Point] = {}
 
-    def addEdge(self, node, neighbour, weight=None):
-        if neighbour in self.__parent_node:
-            self.removeEdge(self.__parent_node[neighbour], neighbour)
-        super().addEdge(node, neighbour, weight)
-        self.__parent_node[neighbour] = node
+    def addEdge(self, parent, child, weight=None):
+        if child in self.__parent_node:
+            self.removeEdge(self.getParent(child), child)
+        super().addEdge(parent, child, weight)
+        self.__parent_node[child] = parent
 
     def getParent(self, node):
         if node in self.__parent_node:
@@ -77,6 +81,11 @@ class Tree(Graph):
             node = self.getParent(node)  # go up in the tree
         path.insert(0, node)  # finally, add the tree source
         return path
+
+    def __getitem__(self, item: Union[Point, Tuple[Point, Point]]):
+        if isinstance(item, Point):
+            return self[self.getParent(item), item]
+        return super().__getitem__(item)
 
 
 class GridGraph(Graph):
@@ -124,11 +133,11 @@ def dijkstra(graph: Graph, source: Point or Set[Point], end_condition=(lambda _:
 
     if isinstance(source, Point):
         source = {source}
-    tree = Tree()
-    explored: Set[Point] = set()
-    for source_pos in source:
-        tree.addEdge(source_pos, source_pos, 0)
-    neighbours: SortedList = SortedList(source, lambda pos: tree[tree.getParent(pos), pos])
+    source_tree = Tree()
+    explored_nodes: Set[Point] = set()
+    for source_node in source:
+        source_tree.addEdge(source_node, source_node, 0)
+    neighbours: SortedList = SortedList(source, lambda pos: source_tree[pos])
 
     node: Point = source.pop()
     while neighbours:
@@ -136,18 +145,23 @@ def dijkstra(graph: Graph, source: Point or Set[Point], end_condition=(lambda _:
         if end_condition(node):
             break
 
-        elif node in explored:
+        elif node in explored_nodes:
             continue
 
-        node_value = tree[tree.getParent(node), node]
-        for neighbour in filter(lambda n: n not in explored, graph.getNeighbours(node, parent=tree.getParent(node))):
-            cost = graph[node, neighbour]
-            if cost < MAX_INT:
-                tree.addEdge(node, neighbour, node_value + cost)
-                neighbours.add(neighbour)
-        explored.add(node)
+        node_value = source_tree[node]
+        for neighbour in filter(lambda n: n not in explored_nodes, graph.getNeighbours(node, parent=source_tree.getParent(node))):
+            cost = node_value + graph[node, neighbour]
+            if neighbour in source_tree:
+                prev_cost = source_tree[neighbour]
+            else:
+                prev_cost = MAX_INT
 
-    return tree, node
+            if cost < prev_cost:
+                source_tree.addEdge(node, neighbour, cost)
+                neighbours.add(neighbour)
+        explored_nodes.add(node)
+
+    return source_tree, node
 
 
 def connected_component(

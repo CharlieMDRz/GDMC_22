@@ -800,7 +800,7 @@ ground_blocks = {
     b.Glowstone
 }
 
-water_blocks = {b.Water, b.Ice, b.FrostedIce, b.PackedIce, b.BlueIce}
+water_blocks = {b.Water, b.Ice, b.FrostedIce, b.PackedIce, b.BlueIce, b.Kelp}
 
 lava_blocks = {b.Lava}
 

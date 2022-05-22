@@ -35,7 +35,10 @@ class RailNetwork(RoadNetwork, metaclass=Singleton):
     def add_station(self, position: Position, orientation: Direction):
         train_station: TrainStation = TrainStation(position, orientation)
         self.__stations[position] = train_station
-        self.create_road(train_station.connectors[0].pos, train_station.connectors[1].pos)
+        p, q = train_station.connectors[:2]
+        path = [(p * (1-t) + q * t).asPosition for t in np.linspace(0, 1, int((p-q).norm)+1)]
+        super().create_road(path=path)
+        return train_station
 
     def add_edge(self, p1: Position, p2: Position):
         station1 = self.__stations[p1]
@@ -87,7 +90,7 @@ class RailNetwork(RoadNetwork, metaclass=Singleton):
     def connect_to_network(self, target: Position, margin: int = 0) -> List[Set[Point]]:
         raise NotImplementedError()
 
-    def cycle_creation_condition(self, node1: Point, node2: Point) -> (List[Point], List[Point]):
+    def try_to_create_direct_path(self, node1: Point, node2: Point) -> (List[Point], List[Point]):
         return [], []
 
     def generate(self, level, districts):
@@ -139,7 +142,7 @@ class RailRoadGraph(GridGraph):
         def prev_angle(dx, dz):
             if dx == 0 and dz == 0:
                 return RailNetwork().get_rail_direction(node)
-            atan = math.atan(dz / dx)
+            atan = math.atan(dz / dx) if dx else math.pi / 2
             if dx >= 0:
                 return atan
             else:
