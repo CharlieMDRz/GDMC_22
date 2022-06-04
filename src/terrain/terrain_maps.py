@@ -3,6 +3,7 @@ import logging
 from gdpc import worldLoader
 
 from generation.structure import AREA_STRUCTURE
+import pathfinding
 from terrain import EntityManager
 from terrain.biomes import BiomeMap
 from terrain.fluid_map import FluidMap
@@ -17,7 +18,6 @@ class TerrainMaps:
     """
 
     def __init__(self, level: worldLoader.WorldSlice, area: BuildArea):
-        from path_networks import RoadNetwork, RailNetwork
         if area.width < level.heightmaps["WORLD_SURFACE"].shape[0]:
             for k, hm in level.heightmaps.items():
                 level.heightmaps[k] = hm[:-1, :-1]
@@ -37,8 +37,8 @@ class TerrainMaps:
         print(f'Computed fluid map in {time() - t1}')
 
         t1 = time()
-        self.road_network = RoadNetwork(self.width, self.length, self)  # type: RoadNetwork
-        self.rail_network: RailNetwork = RailNetwork(self.width, self.length, self)
+        self.road_network = pathfinding.road_network.RoadNetwork(self.width, self.length, self)
+        self.rail_network = pathfinding.rail_network.RailNetwork(self.width, self.length, self)
         print(f'Computed road map in {time() - t1}')
 
         t1 = time()
@@ -88,7 +88,7 @@ class TerrainMaps:
         """
         Undo all modifications to the terrain for debug purposes
         """
-        dump()
+        dump()  # clear buffer
         current_terrain = TerrainMaps.request(self.area.json)
         old_level = self.level
         new_level = current_terrain.level
@@ -101,6 +101,6 @@ class TerrainMaps:
                 coords = pos.abs_x, y, pos.abs_z
                 if old_level.getBlockAt(*coords) != new_level.getBlockAt(*coords):
                     AREA_STRUCTURE.set(pos.withCoords(y=y), old_level.getBlockAt(*coords), 100000)
-        dump()
+        dump()  # finalize reset
 
         self.entities.reset()

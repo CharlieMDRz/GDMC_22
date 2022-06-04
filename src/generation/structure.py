@@ -1,5 +1,6 @@
 import logging
 import traceback
+from typing import Union, List
 
 from gdpc import interface
 from numpy import zeros, int32
@@ -12,13 +13,13 @@ class Structure(BoundingBox):
     def __init__(self, origin, size):
         super().__init__(origin, size)
         self.__priority = zeros(size, dtype=int32)
-        self.interface: interface.Interface = interface.Interface(buffering=True)
+        self.interface: interface.Interface = interface.Interface(buffering=True, caching=True)
 
     @classmethod
     def from_box(cls, box: BoundingBox):
         return cls(box.origin, box.size)
 
-    def set(self, pos: Position, block_state: str, priority: int = 1, force: bool = False, **kwargs):
+    def set(self, pos: Position, block_state: Union[str, List[str]], priority: int = 1, force: bool = False, **kwargs):
         """
         Place a block
         :param pos: position to place to
@@ -36,8 +37,8 @@ class Structure(BoundingBox):
             absolute_point = pos
             relative_point = pos - self.origin
         if absolute_point.xyz not in self:
-            logging.error(f"Trying to set block outside build area ! @{absolute_point}")
-            traceback.print_stack()
+            logging.debug(f"Trying to set block outside build area ! @{absolute_point}")
+            # traceback.print_stack()
             return
         prev_priority = self.__priority[relative_point.xyz]
 
@@ -46,7 +47,7 @@ class Structure(BoundingBox):
             self.interface.placeBlock(x, y, z, block_state, **kwargs)
             self.__priority[relative_point.xyz] = priority
 
-    def fill(self, box: BoundingBox, blockstate: str, priority: int = 1, force=False, **kwargs):
+    def fill(self, box: BoundingBox, blockstate: Union[str, List[str]], priority: int = 1, force=False, **kwargs):
         for x, y, z, in box.positions:
             p = Point(x, z, y)
             self.set(p, blockstate, priority, force, **kwargs)

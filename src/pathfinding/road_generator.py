@@ -298,7 +298,8 @@ class CarvedRoad(Generator):
             height = road_height + 2 - ground_height
             if height < 2:
                 road_box = TransformBox((absolute_road.abs_x - 1, road_height + 1, absolute_road.abs_z - 1), (3, 3, 3))
-                AREA_STRUCTURE.fill(road_box, alpha.Air, replace=ground_blocks)
+                road_box.intersect(BuildArea().box)
+                AREA_STRUCTURE.fill(road_box, alpha.Air, replace=list(ground_blocks))
 
 
 class RoadPalette:

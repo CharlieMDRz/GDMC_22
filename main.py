@@ -36,7 +36,9 @@ def main(districts=None, seeding=None, parcels=None, generation=None, visualize=
     print("Hello Settlers!")
     # get & parse building zone
     terrain: TerrainMaps = TerrainMaps.request()
+    t0 = time.time()
     ObstacleMap.from_terrain(terrain)  # initialize obstacle map from the terrain
+    print(f"Computed obstacle map in {(time.time() - t0):0.3f} seconds")
     settlement = Settlement(terrain)
 
     try:
@@ -48,7 +50,7 @@ def main(districts=None, seeding=None, parcels=None, generation=None, visualize=
 
         if seeding:
             # define buildings list and seed them
-            seeding(settlement, visualize)
+            seeding(settlement, do_visu=visualize)
         else: return
         settlement.clean_road_network()
 
@@ -82,7 +84,7 @@ def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument("--steps", "-s", nargs='+', type=str, default=["D1", "S0", "G", "P"])
     parser.add_argument("--visualize", "-v", action="store_true", help="Export visualization maps during run")
-    parser.add_argument("--time", "-T", type=int, default=600, help="Time limit in seconds for the whole run, negative value for no limit")
+    parser.add_argument("--time", "-T", type=int, default=1200, help="Time limit in seconds for the whole run, negative value for no limit")
 
     run_modes = parser.add_mutually_exclusive_group()
     run_modes.add_argument("--undo", "-u", action="store_true", help="Undo generation after user input")
@@ -112,7 +114,7 @@ def get_generation_options(step_list: List[str]) -> Dict[str, Union[Callable, No
         },
 
         "S": {
-            "no": (lambda *o: None, "Skips seeding process"),
+            "no": (lambda *o, **kw: None, "Skips seeding process"),
             "0": (Settlement.build_skeleton, "Iteratively seed positions for parcels of specific type")
         },
 

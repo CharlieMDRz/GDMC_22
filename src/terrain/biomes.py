@@ -1,3 +1,4 @@
+import time
 from enum import Enum
 from itertools import product
 
@@ -137,8 +138,10 @@ class BiomeMap(PointArray):
     def temperature_map(self) -> np.ndarray:
         mult = 100
         if self.__temperature is None:
+            t0 = time.time()
             init_temperature = np.array([[self.temperature(Position(x, z)) * mult for z in range(self.alength)] for x in range(self.awidth)], dtype=np.uint8)
             self.__temperature = cv2.blur(init_temperature, (15, 15)) / mult
+            print(f"Computed temperature map in {(time.time() - t0):0.3f} seconds")
 
         return self.__temperature
 

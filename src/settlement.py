@@ -14,8 +14,7 @@ from building_seeding.interest.interest import InterestMap
 from generation.generators import place_sign
 from generation.structure import AREA_STRUCTURE
 from parameters import MAX_HEIGHT, BUILDING_HEIGHT_SPREAD, TERRAFORM_ITERATIONS, AVERAGE_PARCEL_SIZE
-from path_networks import RoadNetwork
-from path_networks.rail_network import compute_train_line
+from pathfinding import RoadNetwork
 from terrain import TerrainMaps
 from utils import *
 from utils.algorithms import min_spanning_tree, tree_distance
@@ -36,7 +35,7 @@ class Settlement:
         self.districts: Districts = Districts(self._maps.area)
         self._origin = maps.area.origin
         self._center: Point = Point(0, 0)
-        self._road_network = self._maps.road_network
+        self._road_network: RoadNetwork = self._maps.road_network
         self._parcels: List[Parcel] = []
 
     def __random_border_point(self):
@@ -92,10 +91,10 @@ class Settlement:
                 else:
                     logging.debug('\tDismissed point {} at {}m < {}m'.format(*log_args))
                     min_distance_to_roads *= 0.9
-            print(f"[Settlement] Creating road towards border point at {out_connections[-1]}")
+            logging.info(f"[Settlement] Creating road towards border point at {out_connections[-1]}")
             self._road_network.connect_to_network(out_connections[-1])
 
-    def build_skeleton(self, time_limit: int, do_visu: bool = False):
+    def build_skeleton(self, time_limit: int = 0, do_visu: bool = False):
         village_skeleton = VillageSkeleton('Flat_scenario', self._maps, self.districts, self._parcels)
         village_skeleton.grow(time_limit, do_visu)
 
@@ -103,7 +102,7 @@ class Settlement:
         """
         Parcel extension from initialized parcels. Parcels are expended in place
         """
-        print("Extending parcels")
+        logging.info("Extending parcels")
         from terrain import ObstacleMap
         ObstacleMap().add_obstacle(Point(0, 0), self._road_network.obstacle)
         ObstacleMap().add_obstacle(Point(0, 0), self._maps.fluid_map.as_obstacle_array)
@@ -130,7 +129,7 @@ class Settlement:
                     parcel.expand(direction)
                     expendable_parcels.add(parcel)
                 except StopIteration:
-                    logging.info(f"Cannot extend {str(parcel)} any more")
+                    logging.debug(f"Cannot extend {str(parcel)} any more")
 
         # set parcels heights
         def define_parcels_heights(__parcel):
@@ -152,7 +151,7 @@ class Settlement:
             h = int(MAX_HEIGHT * exp(-d / BUILDING_HEIGHT_SPREAD))
             __parcel.set_height(y, h)
 
-        print("Defining parcels' and buildings' heights")
+        logging.info("Defining parcels' and buildings' heights")
         for p in self._parcels:
             p.compute_entry_point()
             define_parcels_heights(p)
@@ -172,7 +171,7 @@ class Settlement:
             if not in_bounds():
                 continue
             try:
-                print("Generating", str(parcel))
+                logging.info(f"Generating {str(parcel)}")
                 _gen = parcel.generator
                 _gen.choose_sub_generator(self._parcels)
                 from building_seeding.settlement import Town
@@ -182,7 +181,7 @@ class Settlement:
                 _gen.generate(self._maps, parcel.height_map, _palette)
             except Exception:
                 traceback.print_exc()
-        dump()
+        dump()  # finalize generation
 
     @property
     def town_center(self):
@@ -256,7 +255,7 @@ class Settlement:
         def unset_road(p: Position):
             if p in network.road_blocks:
                 network.road_blocks.remove(p)
-            else:
+            elif p in network.special_road_blocks:
                 network.special_road_blocks.remove(p)
             road_map[p.x, p.z] = 0
             network.network[p.x, p.z] = 0
@@ -324,7 +323,9 @@ class Settlement:
             station_edges: List[Point] = [(station - neighbour) for neighbour in network_graph.getNeighbours(station)]
             station_dir_vec: Point = sum(abs(vec) for vec in station_edges)
             station_dir: Direction = Direction.of(*station_dir_vec.xyz)
+            station = station.withCoords(y=self._maps.height_map[station.xz])
             self._maps.rail_network.add_station(station, station_dir)
+            self._road_network.connect_to_network(station, 5)
 
         for station, neighbour in rail_sections:
             self._maps.rail_network.add_edge(station.asPosition, neighbour.asPosition)

@@ -27,7 +27,7 @@ def dump():
     from utils import BuildArea
     setBlock(BuildArea().origin, BlockAPI.blocks.Bedrock, 0)
     from generation.structure import AREA_STRUCTURE
-    AREA_STRUCTURE.dump()
+    AREA_STRUCTURE.dump()  # clear buffer of preferred interface
     direct_interface.runCommand("kill @e[type=minecraft:item]")
 
 
@@ -912,20 +912,23 @@ class BlockStateDict(dict, metaclass=Singleton):
         return data
 
 
-def build_block_state(block: str, **kwargs) -> str:
+def build_block_state(block: str, force_properties=False, **kwargs) -> str:
     block_states = BlockStateDict()
     valid_tags: List[Tuple[str, str]] = []
 
-    if block not in block_states:
-        logging.error(f"no tags associated to block {block}")
+    if force_properties:
+        valid_tags = list(kwargs.items())
     else:
-        for tag, tag_value in kwargs.items():
-            if tag not in block_states[block]:
-                logging.error(f"no tag {tag} associated to block {block}")
-            elif tag_value not in block_states[block][tag]:
-                logging.error(f"tag {tag} of block {block} cannot be set to {tag_value}")
-            else:
-                valid_tags.append((tag, tag_value))
+        if block not in block_states:
+            logging.error(f"no tags associated to block {block}")
+        else:
+            for tag, tag_value in kwargs.items():
+                if tag not in block_states[block]:
+                    logging.error(f"no tag {tag} associated to block {block}")
+                elif tag_value not in block_states[block][tag]:
+                    logging.error(f"tag {tag} of block {block} cannot be set to {tag_value}")
+                else:
+                    valid_tags.append((tag, tag_value))
 
     return f"{block}[{', '.join('='.join(tag_value) for tag_value in valid_tags)}]"
 

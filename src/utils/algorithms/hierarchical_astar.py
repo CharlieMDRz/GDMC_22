@@ -1,13 +1,30 @@
+import logging
+import time
+from typing import List
+
 from numba.typed import List as nbList
 from numpy.random import randint
 
+from utils import Position, BuildArea
 from utils.algorithms.fast_astar import abs_distance, numba, in_limits, MAX_INT, \
     _path_to_dest, _heuristic as euclidean, njit, np, jit
 from utils.misc_objects_functions import index_argmin
 GAMMA = 4
 
 
-def hierarchical_astar(source, target, dimensions, cost_function):
+def hierarchical_astar(source: Position, target: Position, cost_function) -> List[Position]:
+    t0 = time.time()
+    path = tuple_hierarchical_astar(
+        source.xz,
+        target.xz,
+        (BuildArea().width, BuildArea().length),
+        lambda p, q: cost_function(Position(*p), Position(*q))
+    )
+    logging.info(f"Computed hierarchical A* from {source} to {target} in {time.time() - t0} seconds")
+    return [Position(*r) for r in path]
+
+
+def tuple_hierarchical_astar(source, target, dimensions, cost_function):
     """
     Custom A* algorithm - computes path with decreasing steps
     :param source: source point (x, z)
@@ -70,28 +87,28 @@ def hierarchical_astar(source, target, dimensions, cost_function):
             step //= GAMMA
 
 
-@njit
+# @njit
 def _heuristic_index(point, path):
     distance_to_path = nbList()
     [distance_to_path.append(euclidean(point, point2)) for point2 in path]
     return index_argmin(distance_to_path)
 
 
-@njit()
+# @njit()
 def _heuristic(point, path, path_heuristic):
     i = _heuristic_index(point, path)
     if i == len(path) - 1:
-        return euclidean(point, path[-1])
+        return abs(point[0] - path[-1][0]) + abs(point[1] - path[-1][1])
     target = path[i + 1]
-    return euclidean(point, target) + path_heuristic[i + 1]
+    return abs(point[0] - target[0]) + abs(point[1] - target[1]) + path_heuristic[i + 1]
 
 
-@njit()
+# @njit()
 def _closest_neighbor(env, path, path_heuristic):
     distance_map, neighbors = env[:2]
     heuristic_map = env[3]
     closest_neighbors = nbList()
-    closest_neighbors.append((1 << 16, 1 << 16))
+    closest_neighbors.append((1 << 8, 1 << 8))
     min_heuristic = MAX_INT
     for neighbor in neighbors:
         x, z = neighbor

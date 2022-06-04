@@ -59,9 +59,9 @@ BUILDING_ENCYCLOPEDIA = {
         # represents the distance to the city center, 0 = center, 1 = map border
         # computed as a balance function
         "Density": {
-            "house": (-1, 0, 3),
-            "crop": (.5, 1.5, 4),
-            'station': (-1, .3, 1),
+            "house": (-1, 1, 3),
+            "crop": (.5, 2, 4),
+            'station': (-1, 1.5, 2),
             "windmill": (1, 2, 4),
             "wood_tower": (0, 0.35, 1.2),
             "stone_tower": (-1, 0.2, 1),

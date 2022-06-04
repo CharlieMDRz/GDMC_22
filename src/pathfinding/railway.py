@@ -6,9 +6,10 @@ from generation import Generator
 from generation.structure import AREA_STRUCTURE
 from utils import Position, Direction, manhattan, getBlockRelativeAt, ground_blocks, euclidean, Point, BlockAPI, \
     place_torch, clear_tree_at, dump, TransformBox, BoundingBox, argmin, BuildArea
+from utils.nbt_structures import StructureNBT
 
 
-class RailElement(object):
+class RailElement:
     def __init__(self, origin, destination):
         self._connectors = [origin, destination]
 
@@ -47,16 +48,15 @@ class RailElement(object):
         return min(_.pos.z for _ in self._connectors)
 
 
-class RailConnector(Position):
+class RailConnector:
     CAPACITY = 2
 
     neighbours: Dict[Direction, RailElement]
-    x_orientation: bool
+    position: Position
 
-    def __new__(cls, position):
-        pos = Position.__new__(cls, position.x, position.z, position.y)
-        pos.neighbours = {}
-        return pos
+    def __init__(self, position):
+        self.position = position
+        self.neighbours = {}
 
     def branch(self, new_edge):
         # assert not self.is_full
@@ -91,7 +91,7 @@ class RailConnector(Position):
 
     @property
     def pos(self):
-        return self
+        return self.position
 
     def getNodes(self, direction):
         # type: (Direction) -> (Position, Position)
@@ -145,16 +145,15 @@ class RailWay(RailElement):
                         AREA_STRUCTURE.set(Point(x, z, y), BlockAPI.blocks.OakPlanks)
             if not underground:
                 clear_tree_at(level, Point(curve_p.abs_x, curve_p.abs_z))
-        dump()
 
 
 class Rails(RailElement):
     DIST_BTWN_ACCELERATION = 16
 
-    def __init__(self, connector1, direction1, connector2, direction2, links_to_curve):
+    def __init__(self, connector1: RailConnector, direction1: Direction, connector2: RailConnector, direction2: Direction, links_to_curve: bool):
         RailElement.__init__(self, connector1, connector2)
-        self.__in = connector1.view(Position)  # type: Position
-        self.__out = connector2.view(Position)  # type: Position
+        self.__in = connector1.pos  # type: Position
+        self.__out = connector2.pos  # type: Position
         self.__in_dir = direction1  # type: Direction
         self.__out_dir = direction2  # type: Direction
         self.__late_acceleration = links_to_curve
@@ -277,6 +276,12 @@ class TrainStation(Generator):
     PLATFORM_LENGTH = 7
 
     def __init__(self, position: Position, orientation: Direction, **kwargs):
+        """
+        Train station
+        :param position: rail position representative of the station on the network
+        :param orientation: direction of the rails running through the station
+        :param kwargs:
+        """
         box = BoundingBox(position.abs_xyz, (1, 1, 1))
         super().__init__(box, **kwargs)
         self.position: Position = position
@@ -289,26 +294,28 @@ class TrainStation(Generator):
             if len(self.connectors) == 2:
                 return None  # todo: handle stations with more than 2 neighbours
             self.__create_connectors()
-        station_conn: RailConnector = argmin([conn for conn in self.connectors if not conn.is_full], lambda c: manhattan(c + (c-self.position)*2, station))
+        connectors = [conn for conn in self.connectors if not conn.is_full]
+        distance = lambda conn: manhattan(conn.pos + (conn.pos - self.position) * 2, station)
+        station_conn: RailConnector = argmin(connectors, distance)
         return station_conn
 
     def __create_connectors(self):
-        prev_conn_mid = (sum(self.connectors[-2:]) / 2).asPosition if self.connectors else self.position
-        conn_mid: Position = prev_conn_mid + self.orientation.rotate().value * 4
+        # prev_conn_mid = self.position
+        # conn_mid: Position = prev_conn_mid + self.orientation.rotate().value * 4
 
-        conn1 = RailConnector(conn_mid - self.orientation.value * (self.PLATFORM_LENGTH - self.PLATFORM_LENGTH // 2))
-        conn2 = RailConnector(conn_mid + self.orientation.value * (self.PLATFORM_LENGTH // 2))
+        conn1 = RailConnector(self.position.withCoords(y=0) - self.orientation.value * (self.PLATFORM_LENGTH - self.PLATFORM_LENGTH // 2))
+        conn2 = RailConnector(self.position.withCoords(y=0) + self.orientation.value * (self.PLATFORM_LENGTH // 2))
         conn1.branch(RailWay(conn1, conn2))
         conn2.branch(RailWay(conn1, conn2))
         self.connectors.extend((conn1, conn2))
 
     def generate(self, level, height_map=None, palette=None):
-        conn1, conn2 = self.connectors[:2]
-        rail_dir: Direction = self.orientation
-        norm_dir: Point = self.orientation.rotate().value
-        y = Point(0, 0, height_map[self.position.xz])
-        Rails(conn1 + norm_dir + y, rail_dir, conn2 + norm_dir + y, -rail_dir, False).generate(level)
-        Rails(conn2 - norm_dir + y, -rail_dir, conn1 - norm_dir + y, rail_dir, False).generate(level)
+        if self.orientation in [Direction.North, Direction.South]:
+            station_nbt = StructureNBT('west_train_station.nbt')
+            station_nbt.build(*(self.position - Point(4, 5, 5)).abs_xyz)
+        else:
+            station_nbt = StructureNBT('north_train_station.nbt')
+            station_nbt.build(*(self.position - Point(5, 4, 5)).abs_xyz)
 
 
 def hermit_curve(p0: Point, q0: Point, p1: Point, q1: Point) -> List[Point]:

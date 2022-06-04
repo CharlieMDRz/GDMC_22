@@ -97,7 +97,7 @@ class Districts(PointArray):
             dc = self.districtClusters[label]
             cluster_matrix = Xu[model.labels_ == label]
 
-            dc.score = cluster_matrix[:, 2].mean()
+            dc.score = 1  # cluster_matrix[:, 2].mean()
             dc.reps = {Position(*cluster_matrix[_, :2]) for _ in range(cluster_matrix.shape[0])}
             dc.size = int(len(dc.reps) / self.keep_rate)
             dc.center = argmin(dc.reps, lambda pos: euclidean(pos, means[label]))
@@ -121,28 +121,25 @@ class Districts(PointArray):
 
         self.__build_cluster_map(model, Xu)
 
-    def __build_data(self, maps: TerrainMaps, coord_scale=1.15):
+    def __build_data(self, maps: TerrainMaps):
         """
         Builds a dataset to perform cluster analysis in order to find suitable positions to build villages
         """
         from building_seeding.interest.interest import InterestMap
         from building_seeding import BuildingType
+
+        DOWN_SIZE = 4
         house_interest = InterestMap(BuildingType.house, "Flat_scenario", maps, None)
-        score_matrix = house_interest.terrain_interest  # interest matrix
+        score_matrix: np.ndarray = house_interest.terrain_interest[::DOWN_SIZE, ::DOWN_SIZE]  # downsized interest matrix
 
-        n_samples: int = min(10000, maps.width * maps.length)  # target number of samples
-        self.keep_rate = n_samples / (maps.width * maps.length)  # resulting portion of positions taken into account
-        sample_pos = random.choices(list(BuildArea.building_positions()), k=n_samples)
-        raw_samples = [[p.x, p.z, score_matrix[p.x, p.z]] for p in sample_pos]  # list (x, z, score)
+        n_samples: int = min(1000, score_matrix.size)  # target number of samples
+        self.keep_rate = n_samples / score_matrix.size  # resulting portion of positions taken into account
+        threshold_score = np.quantile(score_matrix, 1 - self.keep_rate)  # min score of the top #n_samples scores
+        top_score_xz = np.where(score_matrix >= threshold_score)
+        samples = [(x * DOWN_SIZE, z * DOWN_SIZE) for x, z in zip(*top_score_xz)]
 
-        # keep only samples with a score higher than the median
-        threshold_score = np.median([_[-1] for _ in raw_samples])
-        raw_samples = list(filter(lambda sample: sample[-1] >= threshold_score, raw_samples))
-
-        Xu = np.array(raw_samples)
+        Xu = np.array(samples)
         X = self.__scaler.fit_transform(Xu)
-        X[:, :2] = X[:, :2] * coord_scale
-        self.__coord_scale = coord_scale
         print(f"{X.shape[0]} samples to select districts")
         return X, Xu
 

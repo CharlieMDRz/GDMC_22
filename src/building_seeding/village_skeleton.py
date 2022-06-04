@@ -10,13 +10,13 @@ import numpy as np
 from building_seeding.building_pool import BuildingPool, BuildingType
 from building_seeding.district.districts import Districts
 from building_seeding.interest import InterestSeeder
-from building_seeding.interest.pre_processing import VisuHandler
 from building_seeding.parcel import Parcel, MaskedParcel
 from parameters import MIN_PARCEL_SIZE, AVERAGE_PARCEL_SIZE, MAX_PARCELS_IN_BLOCK
-from path_networks import RoadNetwork
+from pathfinding import RoadNetwork
 from terrain import TerrainMaps, ObstacleMap
 from utils import *
 from utils.algorithms.graphs import *
+from visu.pre_processing import VisuHandler
 
 
 class VillageSkeleton:
@@ -122,7 +122,7 @@ class CityBlock(Bounds):
 
     @staticmethod
     def connection(src_point: Point, dst_point: Point) -> bool:
-        net: RoadNetwork = RoadNetwork.INSTANCE
+        net: RoadNetwork = RoadNetwork()
         return net.get_distance(dst_point) > 0
 
     def __subdivide(self, pos: Position, mask: PointArray, ndiv: int) -> List[Tuple[Position, np.ndarray]]:

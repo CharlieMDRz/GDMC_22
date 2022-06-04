@@ -35,7 +35,7 @@ if __name__ == '__main__':
         skeleton.add_parcel(parcel)
     settlement.define_parcels()  # define parcels around seeds
     settlement.generate()  # build buildings on parcels
-    dump()
+    dump()  # finalize test gen
 
     # Optional erasing of the generated settlement
     do_undo = input("Undo ? [y]/n").lower()

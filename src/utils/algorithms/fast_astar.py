@@ -1,3 +1,6 @@
+import logging
+import time
+
 import numba
 import numpy as np
 from numba import njit, jit
@@ -9,12 +12,15 @@ from utils.misc_objects_functions import in_limits
 
 
 def fast_a_star(source: Position, target: Position, cost_function):
+    t0 = time.time()
     def tuple_cost_func(xz1, xz2):
         return cost_function(Position(*xz1), Position(*xz2))
 
     shape = (BuildArea().width, BuildArea().length)
 
     xz_path = a_star(source.xz, target.xz, shape, tuple_cost_func)
+
+    logging.info(f"Computed fast A* from {source} to {target} in {time.time() - t0} seconds")
     return [Position(*xz) for xz in xz_path]
 
 
@@ -82,10 +88,11 @@ def _closest_neighbor(env, destination):
 def _heuristic(point, destination):
     x0, z0 = point
     xf, zf = destination
-    return 1.1 * np.sqrt((xf - x0) ** 2 + (zf - z0) ** 2)
+    return abs(x0 - xf) + abs(z0 - zf)
+    # return 1.1 * np.sqrt((xf - x0) ** 2 + (zf - z0) ** 2)
 
 
-@jit(forceobj=True)
+# @jit(forceobj=True)
 def _update_distance(env, updated_point, neighbor):
     distance_map, neighbors, predecessor_map, h_map, cost = env
     edge_cost = cost(updated_point, neighbor)
@@ -101,7 +108,7 @@ def _update_distance(env, updated_point, neighbor):
         predecessor_map[neighbor] = updated_point
 
 
-@jit(forceobj=True, parallel=True)
+# @jit(forceobj=True, parallel=True)
 def _update_distances(env, dims, point):
     x, z = point  # type: int, int
     for xz in _exploration_neighbourhood(x, z, *dims):

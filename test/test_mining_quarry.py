@@ -7,7 +7,7 @@ if __name__ == '__main__':
     ObstacleMap.from_terrain(terrain)
     for parcel in StructureDetector(terrain).get_structure_parcels():
         parcel.generator.generate(terrain, terrain.height_map.box_height(parcel.box, False))
-    dump()
+    dump()  # finalize test gen
 
     input("Undo ?")
     terrain.undo()

@@ -87,7 +87,11 @@ class Point(np.ndarray):
         return Position(self.x, self.z, self.y)
 
     def withCoords(self, x=None, z=None, y=None):
-        return Point(x if x else self.x, z if z else self.z, y if y else self.y)
+        return Point(
+            x if x is not None else self.x,
+            z if z is not None else self.z,
+            y if y is not None else self.y
+        )
 
 
 class Position(Point):
@@ -304,6 +308,10 @@ class BuildArea(metaclass=Singleton):
     @property
     def rect(self):
         return self.x, self.z, self.width, self.length
+
+    @property
+    def box(self):
+        return BoundingBox((self.x, 0, self.z), (self.width, 256, self.length))
 
     @property
     def json(self):

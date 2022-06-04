@@ -1,7 +1,7 @@
 import logging
 import math
 import traceback
-from typing import List, Set, Dict
+from typing import List, Set, Dict, Tuple
 
 import numpy as np
 from gdpc import lookup
@@ -29,20 +29,19 @@ class RailNetwork(RoadNetwork, metaclass=Singleton):
         super().__init__(width, length, mc_map)
         self.__maps = mc_map
         self.__limits = (width, length)
-        self.__stations: Dict[Position, TrainStation] = {}
+        self.__stations: Dict[Tuple[int, int], TrainStation] = {}
         self.__railPathFinder = PathFinder(7, RailRoadGraph(7, 15, cost=rail_road_build_cost), GridGraph(True, step=7, cost=road_build_cost))
 
     def add_station(self, position: Position, orientation: Direction):
         train_station: TrainStation = TrainStation(position, orientation)
-        self.__stations[position] = train_station
-        p, q = train_station.connectors[:2]
+        self.__stations[position.xz] = train_station
+        p, q = train_station.connectors[0].pos, train_station.connectors[1].pos
         path = [(p * (1-t) + q * t).asPosition for t in np.linspace(0, 1, int((p-q).norm)+1)]
-        super().create_road(path=path)
         return train_station
 
     def add_edge(self, p1: Position, p2: Position):
-        station1 = self.__stations[p1]
-        station2 = self.__stations[p2]
+        station1 = self.__stations[p1.xz]
+        station2 = self.__stations[p2.xz]
         connector_1_2: RailConnector = station1.connect(station2.position)
         connector_2_1: RailConnector = station2.connect(station1.position)
         if connector_1_2 is not None and connector_2_1 is not None:
@@ -66,24 +65,25 @@ class RailNetwork(RoadNetwork, metaclass=Singleton):
     def get_road_width(self, x: Point or int, z: int = None) -> int:
         return 5
 
-    def create_road(self, root_point=None, ending_point=None, path=None, is_station=False):
-        logging.info(f"Creating rail way between {root_point} and {ending_point}")
-        rough_path: List[Position] = self.__railPathFinder.getPath(root_point, ending_point)
-        rough_path = [Position(p.x, p.z, self.__maps.height_map[p.x, p.z]) for p in rough_path]
-        path = [root_point]
-        for i in range(len(rough_path)-1):
-            # section nodes
-            cur_start = rough_path[i]
-            cur_exit = rough_path[i+1]
-            past_start = rough_path[i-1] if i > 0 else cur_start
-            next_exit = rough_path[i+2] if (i+2) < len(rough_path) else cur_exit
+    def create_road(self, root_point=None, ending_point=None, path=None):
+        if path is None:
+            logging.info(f"Creating rail way between {root_point} and {ending_point}")
+            rough_path: List[Position] = self.__railPathFinder.getPath(root_point, ending_point)
+            rough_path = [Position(p.x, p.z, self.__maps.height_map[p.x, p.z]) for p in rough_path]
+            path = [root_point]
+            for i in range(len(rough_path)-1):
+                # section nodes
+                cur_start = rough_path[i]
+                cur_exit = rough_path[i+1]
+                past_start = rough_path[i-1] if i > 0 else cur_start
+                next_exit = rough_path[i+2] if (i+2) < len(rough_path) else cur_exit
 
-            # section direction
-            start_dir = (cur_exit - past_start) / 3
-            end_dir = (next_exit - cur_start) / 3
+                # section direction
+                start_dir = (cur_exit - past_start) / 3
+                end_dir = (next_exit - cur_start) / 3
 
-            path.extend(hermit_curve(cur_start, start_dir, cur_exit, end_dir)[1:])
-            # self.add_edge(cur_start, cur_exit)
+                path.extend(hermit_curve(cur_start, start_dir, cur_exit, end_dir)[1:])
+                # self.add_edge(cur_start, cur_exit)
 
         return super().create_road(path=path)
 
@@ -175,7 +175,7 @@ def rail_road_build_cost(src_point: Position, dst_point: Position):
     cost = road_build_cost(src_point, dst_point)
 
     if cost <= MAX_INT:
-        road_net: RoadNetwork = RoadNetwork.INSTANCE
+        road_net: RoadNetwork = RoadNetwork()
         road_dist = road_net.get_distance(dst_point)
         if road_dist <= RAIL_ROAD_SPACING:
             cost += scale * RAIL_ROAD_PENALTY

@@ -1,4 +1,5 @@
 import itertools
+import time
 from collections import OrderedDict
 from typing import Tuple, List, Set, Callable, Dict
 
@@ -37,17 +38,16 @@ class TreesMap(PointArray):
     @property
     def tree_distance(self) -> np.ndarray:
         if self.__tree_distance is None:
-            tree_distances = []
+            t0 = time.time()
+            tree_distances = np.full((self.width, self.length), 1000)
             for tree in self.__trees:
                 if tree:
                     x, _, z = list(tree)[0]  # base trunk block position
                     x_dist = X_ARRAY - x
                     z_dist = Z_ARRAY - z
-                    tree_distances.append(abs(x_dist) + abs(z_dist))  # manhattan dist to the tree
-            if tree_distances:
-                self.__tree_distance = np.minimum.reduce(tree_distances)
-            else:
-                self.__tree_distance = np.full((self.width, self.length), 1000)
+                    tree_distances = np.minimum(tree_distances, abs(x_dist) + abs(z_dist))
+            print(f"Computed tree distance map in {(time.time() - t0):0.3f} seconds")
+            self.__tree_distance = tree_distances
 
         return self.__tree_distance
 

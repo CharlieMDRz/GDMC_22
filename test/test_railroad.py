@@ -4,7 +4,7 @@ from typing import Tuple
 
 import matplotlib.pyplot as plt
 
-from path_networks.rail_network import RailRoadGraph
+from pathfinding.rail_network import RailRoadGraph
 from utils import Point
 
 

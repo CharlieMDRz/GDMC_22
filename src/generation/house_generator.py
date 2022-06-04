@@ -37,7 +37,6 @@ class ProcHouseGenerator(MaskedGenerator):
         self.children[0].translate(dx, 0, dz)
 
     def _generate_stairs(self, level, palette):
-        dump()
         main_room: _RoomSymbol = self.children[0]
         door_wall: Direction = self.entry_direction
         stair_wall: Direction or None = None
@@ -403,7 +402,7 @@ class _WallSymbol(Generator):
                 self.children.append(_WallSymbol(box_wal))
 
     def generate_door(self, door_dir, door_x, door_z, level: worldLoader.WorldSlice, palette: HousePalette):
-        dump()
+        dump()  # need to spawn windows to know where to place door(s)
         box = self._box
         entry = Point(door_x, door_z)
         if self.length > 1:

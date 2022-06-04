@@ -1,9 +1,13 @@
 from os import sep
 
+from gdpc.interface import runCommand
 from nbt.nbt import TAG_Compound, NBTFile, TAG_String
 
 from gdpc import direct_interface
+
+from generation.structure import AREA_STRUCTURE
 from utils import Point, setBlock, BlockAPI, get_project_path
+from utils.block_utils import build_block_state
 
 b = BlockAPI.blocks
 
@@ -39,6 +43,7 @@ class StructureNBT:
         self.__palette = [self.parse_palette(_) for _ in nbt.get(PALETTE)]
 
     def build(self, x, y, z):
+        commands = []
         for blockTag in self.__nbt.get(BLOCKS):
             blockPos = blockTag.get('pos')
             dx, dy, dz = (tag.value for tag in blockPos)
@@ -46,9 +51,14 @@ class StructureNBT:
             blockState = self.__palette[blockTag.get('state').value]
             if blockTag.get('nbt'):
                 blockState += self.parse_data(blockTag.get('nbt'))
-                direct_interface.runCommand(f"setblock {blockPoint.x} {blockPoint.y} {blockPoint.z} {blockState}")
-            else:
-                setBlock(blockPoint, blockState)
+            if 'redstone' in blockState:
+                commands.append(f"setblock {blockPoint.x} {blockPoint.y} {blockPoint.z} {blockState}")
+            AREA_STRUCTURE.set(blockPoint, blockState, 1010)
+
+        AREA_STRUCTURE.dump()  # update placed redstone blocks
+        for cmd in commands:
+            runCommand(cmd)
+
 
     @property
     def width(self):
@@ -76,8 +86,7 @@ class StructureNBT:
                 if blockName in deprecated_name:
                     blockName = deprecated_name[blockName]
         from utils.block_utils import BlockStateDict
-        # assert all(key in BlockStateDict()[blockName] for key in properties.keys())
-        return f"minecraft:{blockName}[{', '.join(f'{key}={value}' for (key, value) in properties.items() if key in BlockStateDict()[blockName])}]"
+        return build_block_state(blockName, True, **properties)
 
     @staticmethod
     def parse_data(param):

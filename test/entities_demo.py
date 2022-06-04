@@ -39,7 +39,7 @@ if __name__ == '__main__':
                 y = terrain.height_map[x - terrain.area.x, z - terrain.area.z] + 1
                 for dy in range(y, y+2):
                     setBlock(Point(x, z, dy), "oak_fence")
-    dump()
+    dump()  # finalize fence
 
     for entity in entities:
         parcel = parcel_for_type[entity.entity_type]

@@ -332,7 +332,6 @@ class CropGenerator(MaskedGenerator):
             crop_block = f"{crop_type}[age={int_crop_age}]"
             AREA_STRUCTURE.set(Point(x, z, y+1), crop_block, 2)
 
-        dump()
         self._irrigate_field(height, 4)
 
     def _gen_harvested_crop(self, height_map, palette=None):
@@ -496,7 +495,6 @@ class WindmillGenerator(Generator):
         box.translate(dy=31, inplace=True)
         windmill_nbt = StructureNBT('gdmc_windmill.nbt')
         windmill_nbt.build(*box.origin)
-        dump()
         # print(runCommand(f'setblock {x} {y+4} {z-1} minecraft:redstone_wall_torch[facing=north, lit=true]'))
         direct_interface.runCommand(f'setblock {x} {y+4} {z-1} minecraft:redstone_wall_torch[facing=north, lit=true]')
 

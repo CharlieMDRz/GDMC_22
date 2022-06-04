@@ -1,27 +1,35 @@
 # coding=utf-8
 import time
 from random import choice
-from typing import Callable, Set
+from typing import Set
 
 from sortedcontainers import SortedList
 
 import terrain
 from generation.generators import *
-from path_networks.road_generator import RoadGenerator
 from parameters import *
+from terrain.obstacle_map import ObstacleMap
 from utils import Point, euclidean
 from utils.algorithms.fast_astar import fast_a_star
 from utils.algorithms.graphs import GridGraph
-from terrain.obstacle_map import ObstacleMap
+from utils.algorithms.hierarchical_astar import hierarchical_astar
+from .path_finder import PathFinder
+from .road_generator import RoadGenerator
+
+__all__ = [
+    'road_build_cost',
+    'road_only_cost',
+    'road_recording_cost',
+    'RoadNetwork'
+]
 
 
 class RoadNetwork(metaclass=Singleton):
     """
     Road network, computes and stores roads to reach every location. If used correctly, the road network should be
-    continuous, ie you can walk from every road point to every other road points by only walking on paths.
-    The road network is built simultaneously with the RoadGenerator, which concretely builds the paths
+    continuous, ie you can walk from every road point to every other road points by only walking on pathfinding.
+    The road network is built simultaneously with the RoadGenerator, which concretely builds the pathfinding
     """
-    INSTANCE = None
 
     def __init__(self, width, length, mc_map=None):
         # type: (int, int, terrain.TerrainMaps) -> RoadNetwork
@@ -41,8 +49,6 @@ class RoadNetwork(metaclass=Singleton):
         self.special_road_blocks: Set[Position] = set()
         self.__generator = RoadGenerator(self, mc_map.box, mc_map) if mc_map else None
         self.terrain = mc_map
-        RoadNetwork.INSTANCE = self
-        from .path_finder import PathFinder
         self.__pathFinder: PathFinder = PathFinder(6, GridGraph(True, step=1, cost=road_recording_cost), GridGraph(True, step=6, cost=road_build_cost))
 
     # region GETTER AND SETTER
@@ -152,7 +158,8 @@ class RoadNetwork(metaclass=Singleton):
             print(f"[RoadNetwork] Compute road path from {str(root_point + self.terrain.area.origin)} "
                   f"towards {str(ending_point + self.terrain.area.origin)}", end="")
             _t0 = time.time()
-            path = self.__pathFinder.getPath(root_point, ending_point)
+            # path = self.__pathFinder.getPath(root_point, ending_point)
+            path = hierarchical_astar(root_point, ending_point, road_build_cost)
             self.nodes.update({root_point.asPosition, ending_point.asPosition})
             print(f" in {(time.time() - _t0):0.2f}s")
         self.__set_road(path)
@@ -183,7 +190,8 @@ class RoadNetwork(metaclass=Singleton):
             print(f"[RoadNetwork] Found existing road towards {str(target)}")
         else:
             _t0 = time.time()
-            path = self.__pathFinder.getPathTowards(target)
+            # path = self.__pathFinder.getPathTowards(target)
+            path = hierarchical_astar(self.__get_closest_node(target), target, road_recording_cost)
             print(f"[RoadNetwork] Computed road path towards {str(target)} in {(time.time() - _t0):0.2f}s")
 
         # if a* fails, return
@@ -191,7 +199,7 @@ class RoadNetwork(metaclass=Singleton):
             return []
 
         # else, register new road(s)
-        if margin > 0:
+        if margin > 0 and manhattan(path[-1], target) <= margin:
             truncate_index = next(i for i, p in enumerate(path) if manhattan(p, target) <= margin)
             path = path[:truncate_index]
             if not path:
@@ -313,7 +321,7 @@ class RoadNetwork(metaclass=Singleton):
         current_dist = len(existing_path)
         if current_dist / straight_dist < MIN_CYCLE_GAIN:
             return existing_path, []
-        straight_path = fast_a_star(node1, node2, road_build_cost)
+        straight_path = hierarchical_astar(node1, node2, road_build_cost)
         straight_dist = len(straight_path)
         if straight_dist and current_dist / straight_dist >= MIN_CYCLE_GAIN:
             return existing_path, straight_path
@@ -332,7 +340,7 @@ class RoadNetwork(metaclass=Singleton):
 
 road_build_cache = {}
 def road_build_cost(src_point, dest_point):
-    network: RoadNetwork = RoadNetwork.INSTANCE
+    network: RoadNetwork = RoadNetwork()
     cost = scale = manhattan(src_point, dest_point)
 
     # First, a couple safe checks
@@ -352,8 +360,8 @@ def road_build_cost(src_point, dest_point):
         # specific cost to build on water
         if network.terrain.fluid_map.is_water(dest_point, margin=MIN_DIST_TO_RIVER):
             if network.terrain.fluid_map.is_water(src_point):
-                return scale * BRIDGE_COST  # bridge continuation
-            return BRIDGE_UNIT_COST + (scale - 1) * BRIDGE_COST  # bridge creation
+                cost += scale * BRIDGE_COST  # bridge continuation
+            cost += BRIDGE_UNIT_COST + (scale - 1) * BRIDGE_COST  # bridge creation
 
         # additional cost for slopes
         direction: Point = (dest_point - src_point).unit
@@ -362,7 +370,7 @@ def road_build_cost(src_point, dest_point):
         elevation = abs(steepness.dot(direction))
         elevation += abs(steepness.dot(Point(-direction.z, direction.x))) / 3
         # cost += scale * elevation  # quadratic cost over slopes
-        cost *= (1 + elevation) ** 2  # quadratic cost over slopes
+        cost += scale * (1 + elevation) ** 2  # quadratic cost over slopes
 
         # discount to get roads closer to water
         src_water = network.terrain.fluid_map.water_distance(src_point)
@@ -371,7 +379,7 @@ def road_build_cost(src_point, dest_point):
             cost += (dest_water - src_water)
 
         # discount to cross rail tracks
-        from path_networks import RailNetwork
+        from pathfinding import RailNetwork
         rail_road = RailNetwork()
         rail_dist = rail_road.get_distance(dest_point)
         if rail_dist <= RAIL_ROAD_SPACING:
@@ -383,12 +391,12 @@ def road_build_cost(src_point, dest_point):
 
 
 def road_only_cost(src_point, dest_point):
-    network = RoadNetwork.INSTANCE
+    network = RoadNetwork()
     return manhattan(src_point, dest_point) if network.is_road(dest_point) else MAX_INT
 
 
 def road_recording_cost(src_point, dest_point):
-    network = RoadNetwork.INSTANCE
+    network = RoadNetwork()
     if network.is_road(dest_point):
         return 1
     if network.path_map[src_point] and dest_point in network.path_map[src_point]:

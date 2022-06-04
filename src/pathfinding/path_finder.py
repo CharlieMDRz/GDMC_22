@@ -1,14 +1,14 @@
+import logging
+import time
 from math import ceil
 from typing import List
 
 from numpy import full
-from sortedcontainers import SortedList
 
 from parameters import MAX_INT
-from . import a_star
-from .road_network import RoadNetwork, road_build_cost as cost_function
-from utils import BuildArea, argmin, euclidean, Position
+from utils import BuildArea, argmin, euclidean, Position, manhattan
 from utils.algorithms.graphs import Graph, Tree, dijkstra
+from . import a_star, road_network
 
 
 class PathFinder:
@@ -33,6 +33,7 @@ class PathFinder:
         :param source: optional target point
         :return: path, ie list of points, from source (or possible source) to target
         """
+        t0 = time.time()
         step = self.__granularity
         rough_target = (target - target % step)
         if source is None:
@@ -62,6 +63,7 @@ class PathFinder:
                 rough_path.pop(i)
             else:
                 i += 1
+        logging.info(f"Computed rough path from {source} to {target} in {time.time() - t0} seconds")
         return rough_path
 
     def getPath(self, source: Position, target: Position):
@@ -71,10 +73,13 @@ class PathFinder:
         :param target: target point
         :return:
         """
+        t0 = time.time()
         if source == target:
             return [source]
         rough_path = self.getRoughPath(target, source)
-        return self.__astar(source, target, rough_path)
+        path = self.__astar(source, target, rough_path)
+        logging.info(f"Computed path from {source} to {target} in {time.time() - t0} seconds")
+        return path
 
     def getPathTowards(self, target: Position):
         """
@@ -84,7 +89,7 @@ class PathFinder:
         """
         roughPathTowardsTarget = self.getRoughPath(target)
         roughSource = roughPathTowardsTarget[0]
-        _, source = dijkstra(self.__path_cost_graph, roughSource, end_condition=(lambda _: RoadNetwork().is_road(_)))
+        _, source = dijkstra(self.__path_cost_graph, roughSource, end_condition=(lambda _: road_network.RoadNetwork().is_road(_)))
         return self.__astar(source, target, roughPathTowardsTarget)
 
     def registerRoad(self, road: List[Position]):
@@ -114,7 +119,7 @@ class PathFinder:
             """
             l = [0]
             for i in range(len(rough_path) - 1, 0, -1):
-                l.append(l[-1] + cost_function(rough_path[i], rough_path[i - 1]))
+                l.append(l[-1] + manhattan(rough_path[i], rough_path[i - 1]))
             return list(reversed(l))
 
         def init():
@@ -131,9 +136,9 @@ class PathFinder:
                 _id = argmin(map(lambda p: euclidean(_pos, p), rough_path))  # index of the closest reference point
                 # heuristic = distance towards this point + heuristic starting in this point
                 if _id >= len(rough_path) - 2:
-                    heuristic_map[_pos.xz] = cost_function(_pos, target)
+                    heuristic_map[_pos.xz] = manhattan(_pos, target)
                 else:
-                    heuristic_map[_pos.xz] = cost_function(_pos, rough_path[_id + 2]) + cumsum[_id + 2]
+                    heuristic_map[_pos.xz] = manhattan(_pos, rough_path[_id + 2]) + cumsum[_id + 2]
             return heuristic_map[_pos.xz]
 
         cumsum = build_cumsum()

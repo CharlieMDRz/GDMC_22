@@ -27,6 +27,6 @@ if __name__ == '__main__':
         terrain.undo()
         box = TransformBox((x, y, z), (w, randint(4, 16), l))
         ProcHouseGenerator(box).generate(terrain, terrain.height_map.box_height(box, False), random_palette())
-        dump()
+        dump()  # finalize test gen
         sleep(4)
     terrain.undo()
