@@ -68,12 +68,13 @@ BUILDING_ENCYCLOPEDIA = {
         },
 
         "Altitude": {
-            "house": (60, 68, 90),
-            "crop": (65, 70, 80),
-            'station': (60, 70, 100),
-            "windmill": (65, 75, 95),
-            "wood_tower": (62, 75, 90),
-            "stone_tower": (68, 80, 95)
+            "default": (10, 40, 70)
+            # "house": (60, 68, 90),
+            # "crop": (65, 70, 80),
+            # 'station': (60, 70, 100),
+            # "windmill": (65, 75, 95),
+            # "wood_tower": (62, 75, 90),
+            # "stone_tower": (68, 80, 95)
         },
 
         "Steepness": {

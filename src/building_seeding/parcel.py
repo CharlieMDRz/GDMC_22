@@ -177,18 +177,6 @@ class Parcel(TransformBox):
         for _ in range(h - 1):
             super().expand(Direction.Top, inplace=True)
 
-    def move_center(self, new_seed):
-        # type: (Point) -> None
-        ObstacleMap().hide_obstacle(*self.obstacle(forget=True), False)
-        move_x = new_seed.x - self.center.x
-        move_z = new_seed.z - self.center.z
-        self.translate(dx=move_x, dz=move_z, inplace=True)
-        if self.box is not None:
-            self.box.translate(dx=move_x, dz=move_z, inplace=True)
-        self._center = new_seed
-        self._entry_point += Point(move_x, move_z)
-        ObstacleMap().add_obstacle(*self.obstacle())
-
     def biome(self, level: TerrainMaps):
         x = randint(self.minx, self.maxx - 1)
         z = randint(self.minz, self.maxz - 1)
@@ -212,12 +200,18 @@ class MaskedParcel(Parcel):
             Parcel.__init__(self, seed, building_type, mc_map)
             self.__expendable = True
 
-    def __valid_extended_point(self, x, z, direction):
+    def __valid_extended_point(self, x, z, direction: Direction):
         """Can we extend the parcel to the point x, z from a given direction"""
-        obstacle = ObstacleMap()
+        obstacle: ObstacleMap = ObstacleMap()
         point = Point(x, z)
-        source = point - direction.value  # type: Point
-        return obstacle.is_accessible(source) and obstacle.is_accessible(direction)
+        source = point - direction.value - self.origin  # type: Point
+        if not (self._mask[source.xz] and obstacle.is_accessible(point)):
+            return False
+
+        if self._map.height_map.steepness(point, norm=True) >= 1:
+            return False
+
+        return True
 
     def is_expendable(self, direction: Direction) -> bool:
         if not self.__expendable:
@@ -234,11 +228,10 @@ class MaskedParcel(Parcel):
                 return False
             if not expanded.surface <= self.max_surfaces[self.building_type.name]: return False
             expanded_ratio = min(expanded.width / expanded.length, expanded.length / expanded.width)
-            if not (expanded.width <= 3 and expanded.length <= 3) or MIN_RATIO_SIDE <= expanded_ratio: return False
+            if not ((expanded.width <= 3 and expanded.length <= 3) or MIN_RATIO_SIDE <= expanded_ratio):
+                return False
 
-            obstacle.hide_obstacle(*self.obstacle())
             validity = [self.__valid_extended_point(x, z, direction) for x, y, z in ext.positions]
-            obstacle.reveal_obstacles()
             return sum(validity) >= len(validity) // 2
 
     def expand(self, direction: Direction, **kwargs) -> None:
@@ -271,6 +264,3 @@ class MaskedParcel(Parcel):
     def add_mask(self, new_mask):
         assert self._mask.shape == new_mask.shape
         self._mask &= new_mask
-
-    def move_center(self, new_seed):
-        pass
