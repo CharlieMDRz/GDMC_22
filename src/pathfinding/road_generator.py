@@ -60,7 +60,7 @@ class RoadGenerator(Generator):
             y, b_id = road_height_map[x, z], network[x, z]
             b = network_palette[b_id]
             xa, za = x + x0, z + z0
-            AREA_STRUCTURE.fill(TransformBox((xa, y+2, za), (1, 2, 1)), alpha.Air, 100)
+            AREA_STRUCTURE.fill(TransformBox((xa, y+1, za), (1, 3, 1)), alpha.Air, 9)
             AREA_STRUCTURE.set(Position(x, z, y-1), alpha.Dirt, 10)
             AREA_STRUCTURE.set(Position(x, z, y), b, 10)
             h = height_map[x, z]

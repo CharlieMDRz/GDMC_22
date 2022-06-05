@@ -5,7 +5,7 @@ from typing import Iterable, List, Tuple
 
 from gdpc import interface, worldLoader, direct_interface, lookup
 
-from .geometry_utils import Point, BuildArea
+from .geometry_utils import Point, BuildArea, Position
 from .misc_objects_functions import Singleton
 from .pymclevel.box import BoundingBox
 
@@ -24,8 +24,6 @@ def setBlock(point: Point, blockstate: str, buffer_size=1000):
 
 
 def dump():
-    from utils import BuildArea
-    setBlock(BuildArea().origin, BlockAPI.blocks.Bedrock, 0)
     from generation.structure import AREA_STRUCTURE
     AREA_STRUCTURE.dump()  # clear buffer of preferred interface
     direct_interface.runCommand("kill @e[type=minecraft:item]")
@@ -846,25 +844,10 @@ def clear_tree_at(terrain, point: Point) -> None:
 
 
 def place_torch(x, y, z, redstone=False):
+    from generation.structure import AREA_STRUCTURE
     if direct_interface.getBlock(x, y, z).endswith(":air"):
         torch = BlockAPI.getTorch(redstone)
-        setBlock(Point(x, z, y), torch)
-
-
-def fillBlocks(box: BoundingBox, block: str, blocksToReplace: str or Iterable[str] = None):
-    """
-    Parameters
-    ----------
-    box
-    block
-    blocksToReplace
-    """
-    if blocksToReplace and type(blocksToReplace) == str:
-        blocksToReplace = {blocksToReplace}
-    for x, y, z, in box.positions:
-        p = Point(x, z, y)
-        if not blocksToReplace or direct_interface.getBlock(x, y, z)[10:] in blocksToReplace:
-            setBlock(p, block)
+        AREA_STRUCTURE.set(Position(x, z, y, True), torch, 100)
 
 
 def symmetric_copy(origin: Point, size: Point, destination: Point, x_sym=False, y_sym=False, z_sym=False):

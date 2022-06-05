@@ -6,7 +6,7 @@ from typing import List
 from numpy import full
 
 from parameters import MAX_INT
-from utils import BuildArea, argmin, euclidean, Position, manhattan
+from utils import BuildArea, argmin, euclidean, Position, manhattan, log_exec_time
 from utils.algorithms.graphs import Graph, Tree, dijkstra
 from . import a_star, road_network
 
@@ -78,7 +78,7 @@ class PathFinder:
             return [source]
         rough_path = self.getRoughPath(target, source)
         path = self.__astar(source, target, rough_path)
-        logging.info(f"Computed path from {source} to {target} in {time.time() - t0} seconds")
+        log_exec_time(t0, f"Computing path from {source} to {target}")
         return path
 
     def getPathTowards(self, target: Position):

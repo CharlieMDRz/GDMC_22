@@ -8,7 +8,8 @@ import numpy
 from utils import Position, BuildArea
 from utils.algorithms.fast_astar import abs_distance, in_limits, MAX_INT, \
     _path_to_dest, _heuristic as manhattan
-from utils.misc_objects_functions import index_argmin
+from utils.misc_objects_functions import index_argmin, numba_list, log_exec_time
+
 GAMMA = 4
 
 
@@ -20,7 +21,7 @@ def hierarchical_astar(source: Position, target: Position, cost_function, get_al
         (BuildArea().width, BuildArea().length),
         lambda p, q: cost_function(Position(*p), Position(*q))
     )
-    logging.info(f"Computed hierarchical A* from {source} to {target} in {time.time() - t0} seconds")
+    log_exec_time(t0, f"hierarchical A* from {source} to {target}")
 
     paths = [[Position(*r) for r in path] for path in tuple_paths]
     if get_all_paths:
@@ -44,6 +45,7 @@ def tuple_hierarchical_astar(source, target, dimensions, cost_function):
     d = abs_distance(source, target)
     while step * GAMMA < d:
         step *= GAMMA
+    step = min(step, GAMMA ** 2)
 
     def get_cumsum():
         """
@@ -176,10 +178,3 @@ def _update_distance(env, updated_point, neighbor):
     if previous_distance > new_distance:
         distance_map[neighbor] = new_distance
         predecessor_map[neighbor] = updated_point
-
-
-def numba_list(iterator: Iterable) -> numba.typed.List[numba.int32]:
-    typed_list = numba.typed.List()
-    for e in iterator:
-        typed_list.append(e)
-    return typed_list

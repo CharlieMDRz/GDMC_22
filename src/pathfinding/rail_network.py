@@ -37,6 +37,7 @@ class RailNetwork(RoadNetwork, metaclass=Singleton):
         self.__stations[position.xz] = train_station
         p, q = train_station.connectors[0].pos, train_station.connectors[1].pos
         path = [(p * (1-t) + q * t).asPosition for t in np.linspace(0, 1, int((p-q).norm)+1)]
+        self.create_road(p, q, path=path)
         return train_station
 
     def add_edge(self, p1: Position, p2: Position):

@@ -11,6 +11,8 @@ import sys
 import warnings
 from typing import Dict, Union, Callable, List
 
+from utils import log_exec_time
+
 warnings.filterwarnings("ignore")
 
 # Managing dependencies and Python path
@@ -38,7 +40,7 @@ def main(districts=None, seeding=None, parcels=None, generation=None, visualize=
     terrain: TerrainMaps = TerrainMaps.request()
     t0 = time.time()
     ObstacleMap.from_terrain(terrain)  # initialize obstacle map from the terrain
-    print(f"Computed obstacle map in {(time.time() - t0):0.3f} seconds")
+    log_exec_time(t0, "Computing obstacle map")
     settlement = Settlement(terrain)
 
     try:

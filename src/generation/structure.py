@@ -29,23 +29,32 @@ class Structure(BoundingBox):
         :param kwargs: args for the Interface.placeBlock method
         :return:
         """
-        if isinstance(pos, Position):
-            absolute_point = Point(pos.abs_x, pos.abs_z, pos.y)
-            relative_point = pos
-        else:
-            pos: Point
-            absolute_point = pos
-            relative_point = pos - self.origin
-        if absolute_point.xyz not in self:
-            logging.debug(f"Trying to set block outside build area ! @{absolute_point}")
+        # Normalize block state: could have more options
+        if "glazed_terracotta" in block_state:
+            rotation_id = (pos.x % 2) * 2 + (pos.z % 2)
+            rotations = ['north', 'west', 'east', 'south']
+            block_state += f"[facing={rotations[rotation_id]}]"
+
+        # switch to relative coordinates if given as point with absolute coords
+        if not isinstance(pos, Position):
+            pos = Position(pos.x, pos.z, pos.y, True)
+
+        if pos.abs_xyz not in self:
+            logging.debug(f"Trying to set block outside build area ! @{pos}")
             # traceback.print_stack()
             return
-        prev_priority = self.__priority[relative_point.xyz]
+        prev_priority = self.__priority[pos.xyz]
 
-        if (priority > prev_priority) or (force and priority == prev_priority):
-            x, y, z = absolute_point.xyz
-            self.interface.placeBlock(x, y, z, block_state, **kwargs)
-            self.__priority[relative_point.xyz] = priority
+        if priority < prev_priority or (priority == prev_priority and not force):
+            return  # not enough priority to replace current block
+        if kwargs.get('replace', False):
+            blocks_to_replace = kwargs.get('replace')
+
+        self.__set(pos, block_state, priority)
+
+    def __set(self, position: Position, block_state: str, priority: int):
+        self.interface.placeBlock(*position.abs_xyz, block_state)
+        self.__priority[position.xyz] = priority
 
     def fill(self, box: BoundingBox, blockstate: Union[str, List[str]], priority: int = 1, force=False, **kwargs):
         for x, y, z, in box.positions:

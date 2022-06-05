@@ -7,7 +7,7 @@ from numba import njit, jit
 from numpy.random import choice
 
 from parameters import MAX_INT
-from utils import Position, BuildArea
+from utils import Position, BuildArea, log_exec_time
 from utils.misc_objects_functions import in_limits
 
 
@@ -20,7 +20,7 @@ def fast_a_star(source: Position, target: Position, cost_function):
 
     xz_path = a_star(source.xz, target.xz, shape, tuple_cost_func)
 
-    logging.info(f"Computed fast A* from {source} to {target} in {time.time() - t0} seconds")
+    log_exec_time(t0, f"Computed fast A* from {source} to {target}")
     return [Position(*xz) for xz in xz_path]
 
 

@@ -1,11 +1,13 @@
 import itertools
+import logging
+import time
 from os.path import realpath, sep
 from random import random
 from typing import Tuple, Iterable
 
 import cv2
 from matplotlib import pyplot as plt
-from numba import njit
+import numba
 import numpy as np
 from sortedcontainers import SortedList
 
@@ -20,6 +22,7 @@ __all__ = [
     'pos_bound',
     'sym_range',
     'in_limits',
+    'log_exec_time',
     'raytrace',
     'Singleton'
 ]
@@ -42,7 +45,7 @@ def argmin(values, key=None):
     if not values:
         return None
     if key is None:
-        return index_argmin(values)
+        return index_argmin(numba_list(values))
 
     def rec_argmin(sub_values):
         if len(sub_values) == 1:
@@ -56,8 +59,21 @@ def argmin(values, key=None):
     return rec_argmin(values)[0]
 
 
-@njit()
-def index_argmin(values) -> int:
+def numba_list(iterator: Iterable) -> numba.typed.List:
+    typed_list = numba.typed.List()
+    for e in iterator:
+        typed_list.append(e)
+    return typed_list
+
+
+def log_exec_time(start_time: float, msg: str):
+    end_time: float = time.time()
+    exec_time: int = int((end_time - start_time) * 1000)
+    logging.info(f"{msg} took {exec_time} ms")
+
+
+@numba.njit()
+def index_argmin(values: numba.typed.List):
     idx_min, val_min = 0, values[0]
     for idx, val in enumerate(values):
         if val < val_min:
@@ -118,7 +134,7 @@ def sym_range(v, dv, vmax=None):
     return range(int(v0), int(v1))
 
 
-@njit
+@numba.njit
 def in_limits(xyz0: Tuple[int, int, int], width, length):
     x0, y0, z0 = xyz0
     return 0 <= x0 < width and 0 <= z0 < length

@@ -155,13 +155,9 @@ class RoadNetwork(metaclass=Singleton):
         # type: (Position, Position, List[Position]) -> List[Position]
         if path is None:
             assert root_point is not None and ending_point is not None
-            print(f"[RoadNetwork] Compute road path from {str(root_point + self.terrain.area.origin)} "
-                  f"towards {str(ending_point + self.terrain.area.origin)}", end="")
-            _t0 = time.time()
             # path = self.__pathFinder.getPath(root_point, ending_point)
             path = hierarchical_astar(root_point, ending_point, road_build_cost)
             self.nodes.update({root_point.asPosition, ending_point.asPosition})
-            print(f" in {(time.time() - _t0):0.2f}s")
         self.__set_road(path)
         return path
 
@@ -366,7 +362,7 @@ def road_build_cost(src_point, dest_point):
         # additional cost for slopes
         direction: Point = (dest_point - src_point).unit
         hm = network.terrain.height_map
-        steepness: Point = hm.steepness(src_point, norm=False)
+        steepness: Point = (hm.steepness(src_point, norm=False) + hm.steepness(dest_point, norm=False)) / 2
         elevation = abs(steepness.dot(direction))
         elevation += abs(steepness.dot(Point(-direction.z, direction.x))) / 3
         # cost += scale * elevation  # quadratic cost over slopes
@@ -385,8 +381,7 @@ def road_build_cost(src_point, dest_point):
         if rail_dist <= RAIL_ROAD_SPACING:
             cost += scale * RAIL_ROAD_PENALTY
 
-        road_build_cache[(src_point, dest_point)] = value = max(scale, cost)
-        return value
+        road_build_cache[(src_point, dest_point)] = max(scale, cost)
     return road_build_cache[(src_point, dest_point)]
 
 

@@ -44,11 +44,11 @@ class RailRoadGenerator(Generator):
             logging.debug(x, y, z, rail_texture)
             ballast_box, air_box = TransformBox((x - 1, y - 1, z - 1), (3, 4, 3)).split(dy=1)  # type: TransformBox, TransformBox
             protected_box = air_box.expand(1, 1, 1)
-            AREA_STRUCTURE.fill(protected_box, b.blocks.Stone, self.PRIORITY, replace=list(water_blocks))
+            # AREA_STRUCTURE.fill(protected_box, b.blocks.Stone, self.PRIORITY, replace=list(water_blocks))  # VERY SLOW
             AREA_STRUCTURE.fill(ballast_box, self.BALLAST_PALETTE, self.PRIORITY + 1)
             AREA_STRUCTURE.fill(air_box, b.blocks.Air, self.PRIORITY + 2)
-            if rail_texture.startswith("powered"):
-                AREA_STRUCTURE.set(rail_pos - Position(0, 0, 1), b.blocks.RedstoneBlock, self.PRIORITY + 3)
+            below_rail_block = b.blocks.RedstoneBlock if 'powered' in rail_texture else self.BALLAST_PALETTE
+            AREA_STRUCTURE.set(rail_pos - Position(0, 0, 1), below_rail_block, self.PRIORITY + 3)
         for rail_pos in self.__rail_positions:
             rail_texture = self.get_rail_blockstate(rail_pos, height_map)
             rail_pos = rail_pos.withCoords(y=height_map[rail_pos.x, rail_pos.z] + 1)

@@ -14,10 +14,10 @@ class ProcHouseGenerator(MaskedGenerator):
         t0 = time.time()
         n_iter = 5000
         main_building: _RoomSymbol = ProcHouseGeneratorBuilder(self.origin, self._mask).build(self._box, n_iter)
-        print(f"Computed {n_iter} foot prints in {(time.time() - t0):0.3}s !")
+        logging.debug(f"Computed {n_iter} foot prints in {(time.time() - t0):0.3}s !")
 
         if main_building is None:
-            print("Parcel ({}, {}) at {} too small to generate a house".format(self.width, self.length, self.mean))
+            logging.info("Parcel ({}, {}) at {} too small to generate a house".format(self.width, self.length, self.mean))
             return
         else:
             self.children.append(main_building)

@@ -9,7 +9,7 @@ from terrain.biomes import BiomeMap
 from terrain.fluid_map import FluidMap
 from terrain.height_map import HeightMap
 from terrain.tree_map import TreesMap
-from utils import BuildArea, BoundingBox, Position, dump
+from utils import BuildArea, BoundingBox, Position, dump, log_exec_time
 
 
 class TerrainMaps:
@@ -26,29 +26,25 @@ class TerrainMaps:
         from time import time
         t0 = t1 = time()
         self.height_map = HeightMap(level, area)
-        print(f'Computed height map in {time() - t1}')
+        log_exec_time(t1, "Computing height map")
 
         t1 = time()
         self.biome = BiomeMap(level, area)
-        print(f'Computed biome map in {time() - t1}')
+        log_exec_time(t1, "Computing biome map")
 
         t1 = time()
         self.fluid_map = FluidMap(level, area, self)
-        print(f'Computed fluid map in {time() - t1}')
+        log_exec_time(t1, "Computing fluid map")
 
-        t1 = time()
         self.road_network = pathfinding.road_network.RoadNetwork(self.width, self.length, self)
         self.rail_network = pathfinding.rail_network.RailNetwork(self.width, self.length, self)
-        print(f'Computed road map in {time() - t1}')
 
         t1 = time()
         self.trees = TreesMap(level, self.height_map)
-        print(f'Computed trees map in {time() - t1}')
-
-        t1 = time()
-        print(f'Computed terrain maps in {t1 - t0}')
+        log_exec_time(t1, "Computing forest map")
 
         self.entities: EntityManager = EntityManager.from_world_slice(level)
+        log_exec_time(t0, "Computing terrain map")
 
     @property
     def width(self):

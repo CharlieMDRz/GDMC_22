@@ -77,7 +77,7 @@ BUILDING_ENCYCLOPEDIA = {
         },
 
         "Steepness": {
-            "default": (1, 4)
+            "default": (0, 2)
         },
 
         "RiverDistance": {

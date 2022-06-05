@@ -1,4 +1,5 @@
 import itertools
+import logging
 from math import floor
 import random
 from typing import List, Tuple
@@ -124,11 +125,11 @@ class MaskedGenerator(Generator):
         for x, y, z in self.surface_pos(height_map):
             if y > mean_y:
                 vbox = BoundingBox((x, mean_y + 1, z), (1, y - mean_y + 1, 1))
-                fillBlocks(vbox, alpha.Air)
+                AREA_STRUCTURE.fill(vbox, alpha.Air)
             elif y < mean_y:
                 vbox = BoundingBox((x, y + 1, z), (1, mean_y - y, 1))
                 material = alpha.StoneBricks if self.is_lateral(x, z) else alpha.Dirt
-                fillBlocks(vbox, material)
+                AREA_STRUCTURE.fill(vbox, material, 2)
         terraform_map[:] = mean_y
         return terraform_map
 
@@ -240,8 +241,8 @@ class CropGenerator(MaskedGenerator):
             self._sub_generator_function = self._gen_animal_farm
 
     def generate(self, level, height_map=None, palette=None):
-        if self.width < 5 and self.length < 5:
-            print(f"Parcel ({self.width}, {self.length}) at {self.mean} too small to generate a crop")
+        if self._mask.sum() < 25:
+            logging.info(f"Parcel ({self.width}, {self.length}) at {self.mean} too small to generate a crop")
             return
         self._clear_trees(level)
         if self._sub_generator_function == self._gen_animal_farm:
@@ -279,7 +280,7 @@ class CropGenerator(MaskedGenerator):
                 AREA_STRUCTURE.fill(box, fence_block, 2)
                 new_gate_pos = Point(ax, az, y+1)
                 new_gate_dist = euclidean(Position(ax, az, y+1, True), self._entry_point)
-                if (gate_pos is None or new_gate_dist < gate_dist) and not self.is_corner(new_gate_pos):
+                if (gate_pos is None or new_gate_dist < gate_dist) and not self.is_corner(new_gate_pos) and box.height == 1:
                     gate_pos, gate_dist = new_gate_pos, new_gate_dist
                     door_dir_vec = self._entry_point - self.mean
                     door_dir: Direction = Direction.of(dx=door_dir_vec.x, dz=door_dir_vec.z)
@@ -450,7 +451,7 @@ class DoorGenerator(Generator):
         for x, y, z in self._box.positions:
             state = self._resource(x, y, z, palette)
             AREA_STRUCTURE.set(Point(x, z, y), state, 100)
-        fillBlocks(self._box.translate(self._direction).split(dy=2)[0], alpha.Air, ground_blocks)
+        AREA_STRUCTURE.fill(self._box.translate(self._direction).split(dy=2)[0], alpha.Air, 100)
 
     def _resource(self, x, y, z, palette):
         if self._box.miny <= y <= self._box.miny + 1:
@@ -483,11 +484,11 @@ class WindmillGenerator(Generator):
 
         # Build floor
         ground_box = TransformBox((x-2, y, z-2), (5, 1, 5))
-        fillBlocks(ground_box, alpha.CoarseDirt)
+        AREA_STRUCTURE.fill(ground_box, alpha.CoarseDirt)
 
         # Build windmill frames
         box = TransformBox((x-5, y-31, z-4), (11, 11, 8))
-        fillBlocks(box.expand(1), alpha.Bedrock)  # protective shell around windmill frames
+        AREA_STRUCTURE.fill(box.expand(1), alpha.Bedrock, 999)  # protective shell around windmill frames
         mech_nbt = StructureNBT('gdmc_windmill_mech.nbt')
         mech_nbt.build(*box.origin)
 

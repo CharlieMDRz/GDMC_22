@@ -137,6 +137,8 @@ def dijkstra(graph: Graph, source: Point or Set[Point], end_condition=(lambda _:
     explored_nodes: Set[Point] = set()
     for source_node in source:
         source_tree.addEdge(source_node, source_node, 0)
+
+    # Stores points to join, sorted by distance to the joined points
     neighbours: SortedList = SortedList(source, lambda pos: source_tree[pos])
 
     node: Point = source.pop()
@@ -148,18 +150,14 @@ def dijkstra(graph: Graph, source: Point or Set[Point], end_condition=(lambda _:
         elif node in explored_nodes:
             continue
 
-        node_value = source_tree[node]
-        for neighbour in filter(lambda n: n not in explored_nodes, graph.getNeighbours(node, parent=source_tree.getParent(node))):
-            cost = node_value + graph[node, neighbour]
-            if neighbour in source_tree:
-                prev_cost = source_tree[neighbour]
-            else:
-                prev_cost = MAX_INT
-
-            if cost < prev_cost:
-                source_tree.addEdge(node, neighbour, cost)
-                neighbours.add(neighbour)
         explored_nodes.add(node)
+        node_distance = source_tree[node]
+        for neighbour in filter(lambda n: n not in explored_nodes, graph.getNeighbours(node, parent=source_tree.getParent(node))):
+            prev_neighbour_distance = source_tree[neighbour] if neighbour in source_tree else MAX_INT
+            node_neighbour_distance = node_distance + graph[node, neighbour]
+            if node_neighbour_distance < prev_neighbour_distance:
+                source_tree.addEdge(node, neighbour, node_neighbour_distance)
+                neighbours.add(neighbour)
 
     return source_tree, node
 

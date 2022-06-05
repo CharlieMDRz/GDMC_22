@@ -53,7 +53,7 @@ class StructureNBT:
                 blockState += self.parse_data(blockTag.get('nbt'))
             if 'redstone' in blockState:
                 commands.append(f"setblock {blockPoint.x} {blockPoint.y} {blockPoint.z} {blockState}")
-            AREA_STRUCTURE.set(blockPoint, blockState, 1010)
+            AREA_STRUCTURE.set(blockPoint, blockState, 1000)
 
         AREA_STRUCTURE.dump()  # update placed redstone blocks
         for cmd in commands:

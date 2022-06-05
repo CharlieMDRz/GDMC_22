@@ -10,5 +10,5 @@ class MineGenerator(MaskedGenerator):
         for x, z in product(range(self.width), range(self.length)):
             if self.is_masked(x, z):
                 pos = Point(x + self.origin.x, z + self.origin.z, height_map[x, z] + 1)
-                setBlock(pos, BlockAPI.blocks.DiamondBlock)
+                # setBlock(pos, BlockAPI.blocks.DiamondBlock)
         super().generate(level, height_map, palette)

@@ -3,7 +3,9 @@ import time
 from typing import List, Dict
 
 from building_seeding import InterestSeeder, BuildingType, VillageSkeleton, Parcel
-from geometry import line2d
+from gdpc.geometry import line2d
+
+from generation.structure import AREA_STRUCTURE
 from settlement import Settlement, dump
 from terrain import TerrainMaps, ObstacleMap
 from utils import detect_entities, Entity, Position, setBlock, Point
@@ -38,7 +40,7 @@ if __name__ == '__main__':
             for x, z in line2d(*line):
                 y = terrain.height_map[x - terrain.area.x, z - terrain.area.z] + 1
                 for dy in range(y, y+2):
-                    setBlock(Point(x, z, dy), "oak_fence")
+                    AREA_STRUCTURE.set(Point(x, z, dy), "oak_fence")
     dump()  # finalize fence
 
     for entity in entities:

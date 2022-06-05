@@ -9,7 +9,7 @@ from sklearn.semi_supervised import LabelPropagation, LabelSpreading
 
 from gdpc.worldLoader import WorldSlice
 from utils import Point, water_blocks, lava_blocks, \
-    BuildArea, getBlockRelativeAt, PointArray, Direction
+    BuildArea, getBlockRelativeAt, PointArray, Direction, log_exec_time
 import parameters
 from terrain.biomes import BiomeMap
 from utils.algorithms.fast_dijkstra import fast_dijkstra
@@ -82,10 +82,10 @@ class FluidMap(PointArray):
                 elif water_type in [2, 3]:
                     self.has_river = True
 
-        t1 = time()
-        print('Computed water map in {:0.3f} seconds'.format(t1 - t0))
+        log_exec_time(t0, "Detecting water sources")
+        t0 = time()
         self.__build_distance_maps()
-        print('Computed distance maps in {:0.3f} seconds'.format(time() - t1))
+        log_exec_time(t0, "Computing fluid distance maps")
 
     def __build_distance_maps(self):
         self.river_distance = np.full(self.__water_map.shape, self.__water_limit, dtype=np.float32)
