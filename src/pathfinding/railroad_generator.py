@@ -149,14 +149,19 @@ class RailRoadGenerator(Generator):
             height_list = [mean(height_map[p.xz] for p in sec) for sec in section_list]
 
             for sec_index, sec in enumerate(section_list):
-                if min(min(manhattan(p, c.pos) for p in sec) for c in connector_heights) <= 1 and not is_in_straight_section(sec[0]):
-                    conn = next(c for c in connector_heights if min(manhattan(p, c.pos) for p in sec) == 1)
+                try:
+                    # retrieve closest connector if any is next to the section (else StopIteration)
+                    conn = next(c for c in connector_heights if min(manhattan(p, c.pos) for p in sec) <= 1)
                     sec_height = connector_heights[conn]
-                    # for neigh_sec_index in range(sec_index - 1, sec_index + 2):
-                    for neigh_sec_index in [sec_index - sec_index % 2]:
+
+                    # fix section height to the station height for every neighbouring section
+                    for neigh_sec_index in range(sec_index - 1, sec_index + 2):
                         neigh_sec_index %= len(section_list)
                         height_list[neigh_sec_index] = sec_height
                         fixed_height_sections.add(neigh_sec_index)
+                except StopIteration:
+                    # section is not along a station
+                    continue
 
             while not valid_config():
                 update_heights()

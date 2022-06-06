@@ -20,7 +20,8 @@ class RoadGenerator(Generator):
         super().__init__(box)
         self.__network = network
         self.__fluids = maps.fluid_map
-        self.__maps = maps
+        from terrain import TerrainMaps
+        self.__maps: TerrainMaps = maps
         self.__origin = Point(box.minx, box.minz)  # type: Point
 
     def generate(self, terrain, height_map=None, palette=None):
@@ -43,7 +44,7 @@ class RoadGenerator(Generator):
                     if road_height_map[x, z] > 0:
                         # if x, z is a road point or has already been computed, no need to do it now
                         continue
-                    if not self.__fluids.is_water(x, z):
+                    if not self.__fluids.is_water(x, z) or (height_map[x, z] - self.__maps.height_map.lower_height(x, z)) <= 1:
                         y, b = self.__compute_road_at(x, z, height_map, palette)
                         if b not in palette_network:
                             b_id = len(palette_network) + 1
@@ -54,9 +55,6 @@ class RoadGenerator(Generator):
                         network[x, z] = b_id
                         road_height_map[x, z] = y
         for x, z in zip(*np.where(network)):
-        # for x in range(self.width):
-        #     for z in range(self.length):
-        #         if network[x, z]:
             y, b_id = road_height_map[x, z], network[x, z]
             b = network_palette[b_id]
             xa, za = x + x0, z + z0
@@ -255,10 +253,10 @@ class Bridge(Generator):
 
             if self.width > self.length:
                 for dz in range(-1, 2):
-                    AREA_STRUCTURE.set(pos + Point(0, dz), b)
+                    AREA_STRUCTURE.set(pos + Point(0, dz), b, 11)
             else:
                 for dx in range(-1, 2):
-                    AREA_STRUCTURE.set(pos + Point(dx, 0), b)
+                    AREA_STRUCTURE.set(pos + Point(dx, 0), b, 11)
 
     @property
     def width(self):

@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Set
 
 import numpy as np
 
@@ -57,10 +57,15 @@ class RailConnector:
     def __init__(self, position):
         self.position = position
         self.neighbours = {}
+        self.adjacent_connectors = set()
+
+    def __str__(self):
+        return f"RailConnector at {self.position}"
 
     def branch(self, new_edge):
         # assert not self.is_full
         other_conn = new_edge.other_end(self)
+        self.adjacent_connectors.add(other_conn)
         railway_vector = other_conn.pos - self.pos
         edge_dir = Direction.of(dx=railway_vector.x, dz=railway_vector.z)
 
@@ -80,6 +85,12 @@ class RailConnector:
             return ends[1]
         else:
             return ends[0]
+
+    def other_neighbour(self, other_conn):
+        neighbours = self.adjacent_connectors.difference([other_conn])
+        if neighbours:
+            return neighbours.pop()
+        return None
 
     @property
     def is_full(self):
@@ -107,6 +118,9 @@ class RailWay(RailElement):
         assert isinstance(connector2, RailConnector)
         RailElement.__init__(self, connector1, connector2)
         self._connectors = [connector1, connector2]  # type: List[RailConnector]
+
+    def __str__(self):
+        return f"RailWay between {self._connectors[0]} and {self._connectors[1]}"
 
     def generate(self, level):
         # get rails
@@ -273,7 +287,7 @@ class Rails(RailElement):
 
 
 class TrainStation(Generator):
-    PLATFORM_LENGTH = 7
+    PLATFORM_LENGTH = 12
 
     def __init__(self, position: Position, orientation: Direction, **kwargs):
         """
@@ -295,7 +309,7 @@ class TrainStation(Generator):
                 return None  # todo: handle stations with more than 2 neighbours
             self.__create_connectors()
         connectors = [conn for conn in self.connectors if not conn.is_full]
-        distance = lambda conn: manhattan(conn.pos + (conn.pos - self.position) * 2, station)
+        distance = lambda conn: manhattan(conn.pos, station)
         station_conn: RailConnector = argmin(connectors, distance)
         return station_conn
 
@@ -316,6 +330,16 @@ class TrainStation(Generator):
         else:
             station_nbt = StructureNBT('north_train_station.nbt')
             station_nbt.build(*(self.position - Point(5, 4, 5)).abs_xyz)
+
+    @staticmethod
+    def compute_direction(position: Point, neighbours: Set[Point]) -> Direction:
+        direction_vec: Point
+        if len(neighbours) == 1:
+            direction_vec = neighbours.pop() - position
+        else:
+            direction_vec = neighbours.pop() - neighbours.pop()
+        # todo: generalize to more neighbours
+        return Direction.of(*direction_vec.xyz)
 
 
 def hermit_curve(p0: Point, q0: Point, p1: Point, q1: Point) -> List[Point]:

@@ -37,7 +37,7 @@ class TerrainMaps:
         log_exec_time(t1, "Computing fluid map")
 
         self.road_network = pathfinding.road_network.RoadNetwork(self.width, self.length, self)
-        self.rail_network = pathfinding.rail_network.RailNetwork(self.width, self.length, self)
+        self.rail_network: pathfinding.rail_network.RailNetwork = pathfinding.rail_network.RailNetwork(self.width, self.length, self)
 
         t1 = time()
         self.trees = TreesMap(level, self.height_map)

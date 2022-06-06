@@ -19,13 +19,14 @@ class Structure(BoundingBox):
     def from_box(cls, box: BoundingBox):
         return cls(box.origin, box.size)
 
-    def set(self, pos: Position, block_state: Union[str, List[str]], priority: int = 1, force: bool = False, **kwargs):
+    def set(self, pos: Position, block_state: Union[str, List[str]], priority: int = 1, force: bool = False, place: bool = True, **kwargs):
         """
         Place a block
         :param pos: position to place to
         :param block_state: blockstate to place
         :param priority: priority of the blockstate, will only place if no block with a >= priority has been set
         :param force: if True, and the current block block at pos has the same priority, will place
+        :param place: whether to place the block. If false, only tags the priority at the given pos
         :param kwargs: args for the Interface.placeBlock method
         :return:
         """
@@ -49,8 +50,8 @@ class Structure(BoundingBox):
             return  # not enough priority to replace current block
         if kwargs.get('replace', False):
             blocks_to_replace = kwargs.get('replace')
-
-        self.__set(pos, block_state, priority)
+        if place:
+            self.__set(pos, block_state, priority)
 
     def __set(self, position: Position, block_state: str, priority: int):
         self.interface.placeBlock(*position.abs_xyz, block_state)

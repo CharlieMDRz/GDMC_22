@@ -15,6 +15,7 @@ from generation.generators import place_sign
 from generation.structure import AREA_STRUCTURE
 from parameters import MAX_HEIGHT, BUILDING_HEIGHT_SPREAD, TERRAFORM_ITERATIONS, AVERAGE_PARCEL_SIZE
 from pathfinding import RoadNetwork
+from pathfinding.railway import TrainStation
 from terrain import TerrainMaps
 from utils import *
 from utils.algorithms import min_spanning_tree, tree_distance
@@ -119,7 +120,7 @@ class Settlement:
         while expendable_parcels:
             # extend expendables parcels from smaller to larger while there still are some
             parcel = expendable_parcels.pop(0)
-            if parcel.entry_point != parcel.center:
+            if (parcel.entry_point - parcel.center).xz != (0, 0):
                 road_dir = Direction.of(*(parcel.entry_point - parcel.center).xyz)
                 lateral_dir = road_dir.rotate() if bernouilli() else -road_dir.rotate()
 
@@ -284,6 +285,7 @@ class Settlement:
 
                 neighbour_town_name = town.name
                 dist = int(distance_map[point, town.center])
+                AREA_STRUCTURE.set(pos, BlockAPI.blocks.OakSign, place=False)
                 if point in town_centers and town == towns[-1]:
                     nom_ville = town_centers[point].name
                     place_sign(pos, BlockAPI.blocks.OakSign, sign_direction, Text1=nom_ville, Text2="--------", Text3=f"{neighbour_town_name}", Text4=f"<--- {dist}m")
@@ -297,15 +299,7 @@ class Settlement:
 
         # Place stations
         for town_index in districts.town_indexes:
-            # Compute town density to seed station position
-            center = districts.towns[town_index].center
-            dist = districts.seeders[town_index]
-            sig_x = dist.stdev_x
-            sig_z = dist.stdev_z
-            district_density = density_one_district((center.x, center.z), (sig_x, sig_z))
-            station_interest = InterestMap(BuildingType.station, "Flat_scenario", self._maps, district_density)
-            station_interest.update(station_parcels)  # take previous stations into account
-            station_position = station_interest.get_seed()
+            station_position = seed_station_in_town(districts, town_index, station_parcels, self._maps)
             if station_position is not None:
                 station_parcels.append(Parcel(station_position, BuildingType.station, self._maps))
         station_parcels.pop(0)
@@ -320,12 +314,24 @@ class Settlement:
             network_graph.addEdge(*section)
 
         for station in network_graph.nodes:  # register each station
-            station_edges: List[Point] = [(station - neighbour) for neighbour in network_graph.getNeighbours(station)]
-            station_dir_vec: Point = sum(abs(vec) for vec in station_edges)
-            station_dir: Direction = Direction.of(*station_dir_vec.xyz)
+            station_dir: Direction = TrainStation.compute_direction(station, network_graph.getNeighbours(station))
             station = station.withCoords(y=self._maps.height_map[station.xz])
             self._maps.rail_network.add_station(station, station_dir)
-            self._road_network.connect_to_network(station, 5)
+            # self._road_network.connect_to_network(station, 5)  # todo: uncomment
 
         for station, neighbour in rail_sections:
             self._maps.rail_network.add_edge(station.asPosition, neighbour.asPosition)
+
+        self._maps.rail_network.create_roads()
+
+
+def seed_station_in_town(districts: Districts, town_index: int, other_stations: List[Parcel], maps: TerrainMaps) -> Position:
+    # Compute town density to seed station position
+    center = districts.towns[town_index].center
+    dist = districts.seeders[town_index]
+    sig_x = dist.stdev_x
+    sig_z = dist.stdev_z
+    district_density = density_one_district((center.x, center.z), (sig_x, sig_z))
+    station_interest = InterestMap(BuildingType.station, "Flat_scenario", maps, district_density)
+    station_interest.update(other_stations)  # take previous stations into account
+    return station_interest.get_seed()

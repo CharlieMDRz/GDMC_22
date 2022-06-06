@@ -7,7 +7,7 @@ import numpy as np
 from gdpc import lookup
 
 from parameters import RAIL_ROAD_SPACING, RAIL_ROAD_PENALTY
-from utils import Position, Point, manhattan, euclidean, Direction, argmin, Singleton
+from utils import Position, Point, manhattan, euclidean, Direction, argmin, Singleton, intersect
 from utils.algorithms.graphs import GridGraph
 from .path_finder import PathFinder
 from .railroad_generator import RailRoadGenerator
@@ -48,7 +48,31 @@ class RailNetwork(RoadNetwork, metaclass=Singleton):
         if connector_1_2 is not None and connector_2_1 is not None:
             connector_1_2.branch(RailWay(connector_1_2, connector_2_1))
             connector_2_1.branch(RailWay(connector_1_2, connector_2_1))
-            self.create_road(connector_1_2.pos, connector_2_1.pos)
+            # self.create_road(connector_1_2.pos, connector_2_1.pos)
+
+    def create_roads(self):
+        # untangle all stations
+        for station in self.__stations.values():
+            connector1, connector2 = station.connectors  # type: RailConnector, RailConnector
+            prev_station: RailConnector = connector1.other_neighbour(connector2)
+            next_station: RailConnector = connector2.other_neighbour(connector1)
+            if prev_station and next_station and intersect((connector1.position, prev_station.position),
+                                                           (connector2.position, next_station.position)):
+                connector1.adjacent_connectors = {connector2, next_station}
+                connector2.adjacent_connectors = {connector1, prev_station}
+
+        # compute all paths joining connectors
+        built_connections = set()
+        for station in self.__stations.values():
+            connector1, connector2 = station.connectors  # type: RailConnector, RailConnector
+            prev_station: RailConnector = connector1.other_neighbour(connector2)
+            next_station: RailConnector = connector2.other_neighbour(connector1)
+            if prev_station is not None and prev_station not in built_connections:
+                self.create_road(prev_station.position, connector1.position)
+                built_connections.update({prev_station, connector1})
+            if next_station is not None and next_station not in built_connections:
+                self.create_road(next_station.position, connector2.position)
+                built_connections.update({next_station, connector2})
 
     def get_rail_direction(self, connector_pos: Position):
         station: TrainStation = argmin(self.__stations.values(), lambda stat: euclidean(connector_pos, stat.position))
