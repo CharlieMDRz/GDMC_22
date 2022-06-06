@@ -435,7 +435,7 @@ class _BaseSymbol(Generator):
         AREA_STRUCTURE.fill(self._box, palette['base'], 15)
 
 
-class ProcHouseGeneratorBuilder():
+class ProcHouseGeneratorBuilder:
     MIN_SIZE = 5
     AVG_SIZE = 7
     MAX_SIZE = 11

@@ -3,7 +3,7 @@ import traceback
 from typing import Union, List
 
 from gdpc import interface
-from numpy import zeros, int32
+import numpy as np
 
 from utils import BoundingBox, Position, Point
 from utils.block_utils import BuildArea
@@ -12,7 +12,7 @@ from utils.block_utils import BuildArea
 class Structure(BoundingBox):
     def __init__(self, origin, size):
         super().__init__(origin, size)
-        self.__priority = zeros(size, dtype=int32)
+        self.__priority = np.zeros(size, dtype=np.int32)
         self.interface: interface.Interface = interface.Interface(buffering=True, caching=True)
 
     @classmethod
@@ -60,6 +60,10 @@ class Structure(BoundingBox):
         for x, y, z, in box.positions:
             p = Point(x, z, y)
             self.set(p, blockstate, priority, force, **kwargs)
+
+    @property
+    def altered_positions(self):
+        return zip(*np.where(self.__priority > 0))
 
     @property
     def origin(self) -> Position:

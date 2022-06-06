@@ -82,21 +82,13 @@ class TerrainMaps:
 
     def undo(self):
         """
-        Undo all modifications to the terrain for debug purposes
+        Undo all modifications to the terrain for debug purposes. Assuming all blocks are set through AREA_STRUCTURE.set
+        iterates through altered positions in that structure
         """
         dump()  # clear buffer
-        current_terrain = TerrainMaps.request(self.area.json)
-        old_level = self.level
-        new_level = current_terrain.level
-        for pos in BuildArea.building_positions():  # type: Position
-            min_y = min(self.height_map.lower_height(pos.x, pos.z),
-                        current_terrain.height_map.lower_height(pos.x, pos.z))
-            max_y = max(self.height_map.upper_height(pos.x, pos.z),
-                        current_terrain.height_map.upper_height(pos.x, pos.z))
-            for y in range(min_y - 2, max_y + 2):
-                coords = pos.abs_x, y, pos.abs_z
-                if old_level.getBlockAt(*coords) != new_level.getBlockAt(*coords):
-                    AREA_STRUCTURE.set(pos.withCoords(y=y), old_level.getBlockAt(*coords), 100000)
+        for x, y, z in AREA_STRUCTURE.altered_positions:
+            pos: Position = Position(x, z, y)
+            AREA_STRUCTURE.set(pos, self.level.getBlockAt(*pos.abs_xyz), 100000)
         dump()  # finalize reset
 
         self.entities.reset()

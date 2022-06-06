@@ -27,6 +27,9 @@ BUILDING_ENCYCLOPEDIA = {
 
             'station-ghost': (-1, 0, 1),
             'station-station': (75, 120, 200),
+            'house-station': (12, 30, 100),
+            'crop-station': (12, 20, 100),
+            'windmill-station': (30, 50, 100),
 
             "house-wood_tower": (16, 24, 40),
             "crop-wood_tower": (8, 16, 30),
@@ -140,7 +143,8 @@ BUILDING_ENCYCLOPEDIA = {
             "house": 150,
             "stone_tower": 64,
             "wood_tower": 49,
-            "windmill": 81
+            "windmill": 81,
+            "station": 81,
         }
     }
 }

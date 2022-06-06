@@ -11,7 +11,6 @@ import sys
 import warnings
 from typing import Dict, Union, Callable, List
 
-from utils import log_exec_time
 
 warnings.filterwarnings("ignore")
 
@@ -32,6 +31,7 @@ logging.basicConfig(
 from building_seeding import district
 from settlement import Settlement
 from terrain import TerrainMaps, ObstacleMap
+from utils import log_exec_time
 
 
 def main(districts=None, seeding=None, parcels=None, generation=None, visualize=False, undo=False) -> None:

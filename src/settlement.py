@@ -292,9 +292,8 @@ class Settlement:
                                Text3=f"<--- {dist}m")
 
     def compute_rail_network(self):
-        town_centers = {t.center for t in self.districts.towns.values()}
         districts: Districts = self.districts
-        station_parcels: List[Parcel] = [Parcel(Position(0, 0), BuildingType.ghost, self._maps)]
+        station_parcels: List[Parcel] = [Parcel(Position(0, 0), BuildingType.station, self._maps)]
 
         # Place stations
         for town_index in districts.town_indexes:
@@ -310,6 +309,7 @@ class Settlement:
             if station_position is not None:
                 station_parcels.append(Parcel(station_position, BuildingType.station, self._maps))
         station_parcels.pop(0)
+        self._parcels.extend(station_parcels)
         station_positions: List[Position] = [parcel.position for parcel in station_parcels]
 
         # Compute station connections
