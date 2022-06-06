@@ -5,10 +5,9 @@ from typing import List
 
 from numpy import full
 
-from parameters import MAX_INT
 from utils import BuildArea, argmin, euclidean, Position, manhattan, log_exec_time
 from utils.algorithms.graphs import Graph, Tree, dijkstra
-from . import a_star, road_network
+from . import road_network, AStar
 
 
 class PathFinder:
@@ -63,7 +62,7 @@ class PathFinder:
                 rough_path.pop(i)
             else:
                 i += 1
-        logging.info(f"Computed rough path from {source} to {target} in {time.time() - t0} seconds")
+        log_exec_time(t0, f"Computed rough path from {source} to {target}")
         return rough_path
 
     def getPath(self, source: Position, target: Position):
@@ -77,11 +76,11 @@ class PathFinder:
         if source == target:
             return [source]
         rough_path = self.getRoughPath(target, source)
-        path = self.__astar(source, target, rough_path)
+        path = AStar(source, target, self.__path_cost_graph, manhattan, rough_path).path
         log_exec_time(t0, f"Computing path from {source} to {target}")
         return path
 
-    def getPathTowards(self, target: Position):
+    def getPathTowards(self, target: Position) -> List[Position]:
         """
         Gets a suboptimal path towards unconnected point. Finds the most suitable road point to connect from
         :param target: point to connect
@@ -90,7 +89,7 @@ class PathFinder:
         roughPathTowardsTarget = self.getRoughPath(target)
         roughSource = roughPathTowardsTarget[0]
         _, source = dijkstra(self.__path_cost_graph, roughSource, end_condition=(lambda _: road_network.RoadNetwork().is_road(_)))
-        return self.__astar(source, target, roughPathTowardsTarget)
+        return AStar(source, target, self.__path_cost_graph, manhattan, roughPathTowardsTarget).path
 
     def registerRoad(self, road: List[Position]):
         for p in road:
@@ -104,46 +103,6 @@ class PathFinder:
     def __hasRoad(self, p: Position):
         q = p // self.__granularity
         return self.__has_road[q.x, q.z]
-
-    def __astar(self, source: Position, target: Position, rough_path):
-        """
-        Custom A* algorithm - computes path with decreasing steps
-        :param source: source point (x, z)
-        :param target: target point (x, z)
-        """
-
-        def build_cumsum() -> List:
-            """
-            Computes target heuristic for each point in the rough path
-            :return:
-            """
-            l = [0]
-            for i in range(len(rough_path) - 1, 0, -1):
-                l.append(l[-1] + manhattan(rough_path[i], rough_path[i - 1]))
-            return list(reversed(l))
-
-        def init():
-            dims = self.__area.width, self.__area.length
-            _distance_map = full(dims, MAX_INT, dtype=float)
-            _distance_map[source.x, source.z] = 0
-            _predecessor_map = full(dims, None)
-            _predecessor_map[source.xz] = source
-            _heuristic_map = full(dims, MAX_INT, dtype=float)
-            return _distance_map, _predecessor_map, _heuristic_map
-
-        def heuristic(_pos):
-            if heuristic_map[_pos.x, _pos.z] == MAX_INT:
-                _id = argmin(map(lambda p: euclidean(_pos, p), rough_path))  # index of the closest reference point
-                # heuristic = distance towards this point + heuristic starting in this point
-                if _id >= len(rough_path) - 2:
-                    heuristic_map[_pos.xz] = manhattan(_pos, target)
-                else:
-                    heuristic_map[_pos.xz] = manhattan(_pos, rough_path[_id + 2]) + cumsum[_id + 2]
-            return heuristic_map[_pos.xz]
-
-        cumsum = build_cumsum()
-        distance_map, predecessor_map, heuristic_map = init()
-        return a_star(source, target, self.__path_cost_graph, heuristic)
 
     @property
     def gwidth(self):

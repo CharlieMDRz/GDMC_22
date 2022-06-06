@@ -12,19 +12,21 @@ import numpy as np
 from sortedcontainers import SortedList
 
 __all__ = [
+    'argmax',
+    'argmin',
     'bernouilli',
     'get_project_path',
-    'argmin',
-    'argmax',
+    'in_limits',
     'index_argmin',
+    'log_exec_time',
     'mean',
+    'numba_list',
     'plot_map',
     'pos_bound',
-    'sym_range',
-    'in_limits',
-    'log_exec_time',
     'raytrace',
-    'Singleton'
+    'sections',
+    'Singleton',
+    'sym_range',
 ]
 
 
@@ -37,6 +39,17 @@ def get_project_path():
     this_path = realpath(__file__)
     proj_path = sep.join(this_path.split(sep)[:-2])
     return proj_path
+
+
+def sections(items: Iterable) -> Iterable[Tuple]:
+    """
+    Gets tuples of consecutive items of the input iterable
+    :param items: sequence of objects
+    :return: iterable over pairs of consecutive items
+    """
+    cur_items, nxt_items = itertools.tee(items)
+    next(nxt_items)
+    return zip(cur_items, nxt_items)
 
 
 def argmin(values, key=None):

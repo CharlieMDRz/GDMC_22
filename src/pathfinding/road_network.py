@@ -155,8 +155,7 @@ class RoadNetwork(metaclass=Singleton):
         # type: (Position, Position, List[Position]) -> List[Position]
         if path is None:
             assert root_point is not None and ending_point is not None
-            # path = self.__pathFinder.getPath(root_point, ending_point)
-            path = hierarchical_astar(root_point, ending_point, road_build_cost)
+            path = self.__pathFinder.getPath(root_point, ending_point)
             self.nodes.update({root_point.asPosition, ending_point.asPosition})
         self.__set_road(path)
         return path
@@ -186,8 +185,7 @@ class RoadNetwork(metaclass=Singleton):
             print(f"[RoadNetwork] Found existing road towards {str(target)}")
         else:
             _t0 = time.time()
-            # path = self.__pathFinder.getPathTowards(target)
-            path = hierarchical_astar(self.__get_closest_node(target), target, road_recording_cost)
+            path = self.__pathFinder.getPathTowards(target)
             print(f"[RoadNetwork] Computed road path towards {str(target)} in {(time.time() - _t0):0.2f}s")
 
         # if a* fails, return
@@ -305,7 +303,7 @@ class RoadNetwork(metaclass=Singleton):
             update_maps_info_at(clst_neighbor)
             update_distances(clst_neighbor)
 
-    def try_to_create_direct_path(self, node1: Point, node2: Point) -> (List[Point], List[Point]):
+    def try_to_create_direct_path(self, node1: Position, node2: Position) -> (List[Point], List[Point]):
         """
         Evaluates whether it's useful to create a new road between two road points
         :param node1:
@@ -317,7 +315,7 @@ class RoadNetwork(metaclass=Singleton):
         current_dist = len(existing_path)
         if current_dist / straight_dist < MIN_CYCLE_GAIN:
             return existing_path, []
-        straight_path = hierarchical_astar(node1, node2, road_build_cost)
+        straight_path = self.__pathFinder.getPath(node1, node2)
         straight_dist = len(straight_path)
         if straight_dist and current_dist / straight_dist >= MIN_CYCLE_GAIN:
             return existing_path, straight_path
@@ -349,7 +347,7 @@ def road_build_cost(src_point, dest_point):
     is_dest_obstacle |= network.terrain.fluid_map.is_lava(dest_point, margin=MIN_DIST_TO_LAVA)
     if is_dest_obstacle:
         # return MAX_INT
-        return 100 * scale
+        return 1000 * scale
 
     # Then, terrain specific costs, use cache
     if (src_point, dest_point) not in road_build_cache:
@@ -365,7 +363,7 @@ def road_build_cost(src_point, dest_point):
         steepness: Point = (hm.steepness(src_point, norm=False) + hm.steepness(dest_point, norm=False)) / 2
         elevation = abs(steepness.dot(direction))
         elevation += abs(steepness.dot(Point(-direction.z, direction.x))) / 3
-        cost += scale * (1 + elevation) ** 2  # quadratic cost over slopes
+        cost += scale * (1 + elevation) ** 4  # quadratic cost over slopes
 
         # discount to get roads closer to water
         src_water = network.terrain.fluid_map.water_distance(src_point)
