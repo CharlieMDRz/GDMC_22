@@ -8,6 +8,7 @@ from pathfinding.path_finder import PathFinder
 from pathfinding.rail_network import rail_road_build_cost, RailRoadGraph
 from pathfinding.road_network import road_build_cost
 from terrain import TerrainMaps, HeightMap, ObstacleMap
+from test.utils import targeted_block_at
 from utils import BlockAPI, Position, plot_map, Direction
 from utils.algorithms.fast_astar import fast_a_star
 from utils.algorithms.graphs import GridGraph
@@ -21,19 +22,12 @@ logging.basicConfig(level=logging.INFO, handlers=[console_log])
 TARGETED_BLOCK = BlockAPI.blocks.DiamondBlock
 
 
-def targeted_block_at(pos: Position):
-    hm: HeightMap = terrain.height_map
-    y = hm.upper_height(pos)
-    block_state: str = terrain.level.getBlockAt(pos.abs_x, y, pos.abs_z)
-    return block_state.replace("minecraft:", '').startswith(TARGETED_BLOCK)
-
-
 def main():
     logging.info("Running path finding tests")
     ObstacleMap.from_terrain(terrain)
     target_positions = []
     for position in tqdm.tqdm(terrain.area.building_positions()):
-        if targeted_block_at(position):
+        if targeted_block_at(terrain, position, [TARGETED_BLOCK]):
             target_positions.append(position)
     print(target_positions)
     source, target = target_positions[:2]

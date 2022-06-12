@@ -6,7 +6,7 @@ from utils import Position, euclidean, Point
 from utils.entities import *
 
 
-class EntityManager():
+class EntityManager:
     WILD_ANIMALS = {'bat', 'bee', 'fox', 'llama', 'ocelot', 'panda', 'polar_bear', 'turtle'}
     FARMING_ANIMALS = {'chicken', 'cow', 'donkey', 'horse', 'mule', 'pig', 'sheep'}
     TAMED_ANIMALS = {'cat', 'parrot', 'rabbit', 'wolf'}

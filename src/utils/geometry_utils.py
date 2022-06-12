@@ -16,6 +16,7 @@ __all__ = [
     'euclidean',
     'intersect',
     'manhattan',
+    'manhattan2d',
     'Point',
     'Position',
     'TransformBox',
@@ -31,7 +32,7 @@ class Point(np.ndarray):
     """
 
     def __new__(cls, x, z, y=0):
-        return np.asarray(np.array((x, y, z))).view(cls)
+        return np.asarray((x, y, z)).view(cls)
 
     def __array_finalize__(self, obj):
         if obj is None: return
@@ -139,7 +140,11 @@ def euclidean(p1: Point, p2: Point) -> float:
 
 
 def manhattan(p1: Point, p2: Point) -> float:
-    return sum(abs(p2 - p1))
+    return abs(p2.x - p1.x) + abs(p2.y - p1.y) + abs(p2.z - p1.z)
+
+
+def manhattan2d(p1: Point, p2: Point) -> float:
+    return sum(abs(p2 - p1).xz)
 
 
 def absolute_distance(p1: Point, p2: Point) -> float:

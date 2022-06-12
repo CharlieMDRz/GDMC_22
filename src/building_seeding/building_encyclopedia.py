@@ -64,7 +64,7 @@ BUILDING_ENCYCLOPEDIA = {
         "Density": {
             "house": (-1, 1, 3),
             "crop": (.5, 2, 4),
-            'station': (-1, 1.5, 2),
+            'station': (.5, 1, 1.5),
             "windmill": (1, 2, 4),
             "wood_tower": (0, 0.35, 1.2),
             "stone_tower": (-1, 0.2, 1),

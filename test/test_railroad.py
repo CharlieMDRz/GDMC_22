@@ -3,9 +3,10 @@ import random
 from typing import Tuple
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 from pathfinding.rail_network import RailRoadGraph
-from utils import Point
+from utils import Point, euclidean
 
 
 def gen_rail_segment(segment_length) -> Tuple[Point, Point]:
@@ -33,10 +34,37 @@ def plot_segment_neighbours(root: Point, node: Point, graph: RailRoadGraph):
     fig.show()
 
 
-if __name__ == '__main__':
+def rail_curvature_test():
     graph = RailRoadGraph(7, 15)
     for _ in range(10):
         root, node = gen_rail_segment(7)
         plot_segment_neighbours(root, node, graph)
         graph.getNeighbours(node, parent=root)
         plt.close()
+
+
+def random_hermit_test():
+    p0, p1 = [Point(*np.random.randint(0, 10, 2)) for _ in range(2)]
+    q0, q1 = [Point(*(np.random.random(2) * euclidean(p0, p1))) for _ in range(2)]
+    plot_hermit(p0, q0, p1, q1)
+
+
+def turnaround_hermit_test():
+    p0, p1 = Point(0, 0), Point(10, 0)
+    q0, q1 = Point(0, 10), Point(0, 10)
+    plot_hermit(p0, q0, p1, q1)
+
+
+def plot_hermit(*points):
+    assert len(points) == 4
+    from pathfinding.rail_network import hermit_curve
+    hermit = hermit_curve(*points, False)
+    fig, ax = plt.subplots()
+    ax.scatter([_.x for _ in hermit], [_.z for _ in hermit])
+    plt.show()
+
+
+if __name__ == '__main__':
+    # rail_curvature_test()
+    # random_hermit_test()
+    turnaround_hermit_test()

@@ -1,22 +1,12 @@
 import random
 from collections import Counter
-from typing import Set, List
+from typing import List
 
+from building_seeding.district.district_builders import DistrictCluster
 from generation import HousePalette
 from parameters import PALETTE_MUTATION_PROBABILITY
 from terrain import TerrainMaps
 from utils import Position, bernouilli
-
-
-class DistrictCluster:
-
-    def __init__(self, id):
-        self.id = id
-        self.reps: Set[Position] = set()
-        self.score: float = 0.
-        self.isTown: bool = False
-        self.center: Position = Position(0, 0)
-        self.size: int = 0
 
 
 class Town:

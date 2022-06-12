@@ -202,7 +202,6 @@ class Rails(RailElement):
             place_accelerator(self.__out + self.__out_dir.value.asPosition, self.__out)
 
     def __gen_spline_rail(self):
-        # todo: generate accelerators where possible ?
         n_points = int(manhattan(self.__in, self.__out))
         p0, p1 = self.__in, self.__out  # interpolation targets
         q0, q1 = self.__in_dir.value.asPosition * (n_points / 2), self.__out_dir.value.asPosition * (
@@ -342,7 +341,7 @@ class TrainStation(Generator):
         return Direction.of(*direction_vec.xyz)
 
 
-def hermit_curve(p0: Point, q0: Point, p1: Point, q1: Point) -> List[Point]:
+def hermit_curve(start: Point, start_direction: Point, end: Point, end_direction: Point, round=True) -> List[Point]:
 
     def hermit(t):
         hp0 = (1 - t) ** 2 * (1 + 2 * t)
@@ -353,18 +352,16 @@ def hermit_curve(p0: Point, q0: Point, p1: Point, q1: Point) -> List[Point]:
 
         hq1 = -(t ** 2) * (1 - t)
 
-        return (p0 * hp0) + (p1 * hp1) + (q0 * hq0) + (q1 * hq1)
+        h = (start * hp0) + (end * hp1) + (start_direction * hq0) + (end_direction * hq1)
+        return h.asPosition if round else h
 
-    distance = int(manhattan(p0, p1))
+    distance = int(manhattan(start, end))
     curve = [hermit(0).asPosition]
     for t in np.linspace(0, 1, distance * 2):
-        new_curve_point = hermit(t).asPosition
+        new_curve_point = hermit(t)
         if new_curve_point.xz != curve[-1].xz:
             curve.append(new_curve_point)
     return curve
-    # curve = {hermit(i / distance).asPosition for i in range(distance + 1)}
-    # ordered_curve = sorted(curve, key=lambda pt: euclidean(p0, pt))
-    # return ordered_curve
 
 
 def place_accelerator(p1: Position, p2: Position, y=None):

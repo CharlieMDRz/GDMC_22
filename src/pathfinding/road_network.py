@@ -49,7 +49,7 @@ class RoadNetwork(metaclass=Singleton):
         self.special_road_blocks: Set[Position] = set()
         self.__generator = RoadGenerator(self, mc_map.box, mc_map) if mc_map else None
         self.terrain = mc_map
-        self.__pathFinder: PathFinder = PathFinder(6, GridGraph(True, step=1, cost=road_recording_cost), GridGraph(True, step=6, cost=road_build_cost))
+        self.__pathFinder: PathFinder = PathFinder(6, GridGraph(True, step=1, cost=road_recording_cost), GridGraph(True, step=6, cost=high_penalty_on_slopes))
 
     # region GETTER AND SETTER
 
@@ -332,7 +332,38 @@ class RoadNetwork(metaclass=Singleton):
                 obs[x1, z1] = True
         return obs
 
+
+def high_penalty_on_slopes(src_point, dest_point):
+    network: RoadNetwork = RoadNetwork()
+    cost = scale = manhattan(src_point, dest_point)
+
+    # if dest_point is an obstacle, return inf
+    is_dest_obstacle = not ObstacleMap().is_accessible(dest_point)
+    is_dest_obstacle |= network.terrain.fluid_map.is_lava(dest_point, margin=MIN_DIST_TO_LAVA)
+    if is_dest_obstacle:
+        # return MAX_INT
+        return 1000 * scale
+
+    # specific cost to build on water
+    if network.terrain.fluid_map.is_water(dest_point, margin=MIN_DIST_TO_RIVER):
+        if network.terrain.fluid_map.is_water(src_point):
+            cost += scale * BRIDGE_COST  # bridge continuation
+        cost += BRIDGE_UNIT_COST + (scale - 1) * BRIDGE_COST  # bridge creation
+
+    # additional cost for slopes
+    direction: Point = (dest_point - src_point).unit
+    hm = network.terrain.height_map
+    steepness: Point = (hm.steepness(src_point, norm=False) + hm.steepness(dest_point, norm=False)) / 2
+    elevation = abs(steepness.dot(direction))
+    elevation += abs(steepness.dot(Point(-direction.z, direction.x))) / 3
+    cost += scale * (1 + elevation) ** 4  # quadratic cost over slopes
+
+    return max(scale, cost)
+
+
 road_build_cache = {}
+
+
 def road_build_cost(src_point, dest_point):
     network: RoadNetwork = RoadNetwork()
     cost = scale = manhattan(src_point, dest_point)
@@ -363,7 +394,7 @@ def road_build_cost(src_point, dest_point):
         steepness: Point = (hm.steepness(src_point, norm=False) + hm.steepness(dest_point, norm=False)) / 2
         elevation = abs(steepness.dot(direction))
         elevation += abs(steepness.dot(Point(-direction.z, direction.x))) / 3
-        cost += scale * (1 + elevation) ** 4  # quadratic cost over slopes
+        cost += scale * (1 + elevation) * 2  # linear cost over slopes
 
         # discount to get roads closer to water
         src_water = network.terrain.fluid_map.water_distance(src_point)

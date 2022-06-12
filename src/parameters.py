@@ -1,3 +1,6 @@
+# Districts
+MAX_DISTRICT_COUNT_OPTIONS = 8
+
 # Road network
 MAX_LAMBDA = 15
 MAX_ROAD_WIDTH = 5

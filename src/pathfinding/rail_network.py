@@ -7,12 +7,12 @@ import numpy as np
 from gdpc import lookup
 
 from parameters import RAIL_ROAD_SPACING, RAIL_ROAD_PENALTY
-from utils import Position, Point, manhattan, euclidean, Direction, argmin, Singleton, intersect
+from utils import Position, Point, manhattan, euclidean, Direction, argmin, Singleton, intersect, manhattan2d
 from utils.algorithms.graphs import GridGraph
 from .path_finder import PathFinder
 from .railroad_generator import RailRoadGenerator
 from .railway import RailConnector, TrainStation, hermit_curve, RailWay
-from .road_network import RoadNetwork, road_build_cost, MAX_INT
+from .road_network import RoadNetwork, road_build_cost, MAX_INT, high_penalty_on_slopes
 
 __all__ = [
     'RailNetwork',
@@ -30,14 +30,14 @@ class RailNetwork(RoadNetwork, metaclass=Singleton):
         self.__maps = mc_map
         self.__limits = (width, length)
         self.__stations: Dict[Tuple[int, int], TrainStation] = {}
-        self.__railPathFinder = PathFinder(7, RailRoadGraph(7, 15, cost=rail_road_build_cost), GridGraph(True, step=7, cost=road_build_cost))
+        self.__railPathFinder = PathFinder(7, RailRoadGraph(7, 15, cost=rail_road_build_cost), GridGraph(True, step=7, cost=high_penalty_on_slopes))
 
     def add_station(self, position: Position, orientation: Direction):
         train_station: TrainStation = TrainStation(position, orientation)
         self.__stations[position.xz] = train_station
         p, q = train_station.connectors[0].pos, train_station.connectors[1].pos
         path = [(p * (1-t) + q * t).asPosition for t in np.linspace(0, 1, int((p-q).norm)+1)]
-        self.create_road(p, q, path=path)
+        super().create_road(p, q, path=path)
         return train_station
 
     def add_edge(self, p1: Position, p2: Position):
@@ -79,13 +79,7 @@ class RailNetwork(RoadNetwork, metaclass=Singleton):
         vec: Point = connector_pos - station.position
         vec *= abs(station.orientation.value)  # keeps component along the station axis
         connector_dir = Direction.of(*vec.xyz)
-        dir_to_angle = {
-            Direction.East: 0,
-            Direction.South: math.pi / 2,
-            Direction.West: math.pi,
-            Direction.North: -math.pi / 2
-        }
-        return dir_to_angle[connector_dir]
+        return connector_dir
 
     def get_road_width(self, x: Point or int, z: int = None) -> int:
         return 5
@@ -93,23 +87,42 @@ class RailNetwork(RoadNetwork, metaclass=Singleton):
     def create_road(self, root_point=None, ending_point=None, path=None):
         if path is None:
             logging.info(f"Creating rail way between {root_point} and {ending_point}")
-            rough_path: List[Position] = self.__railPathFinder.getPath(root_point, ending_point)
-            rough_path = [Position(p.x, p.z, self.__maps.height_map[p.x, p.z]) for p in rough_path]
+            rail_path: List[Position] = self.__railPathFinder.getPath(root_point, ending_point)
+            rail_path = [Position(p.x, p.z, self.__maps.height_map[p.x, p.z]) for p in rail_path]
             path = [root_point]
-            for i in range(len(rough_path)-1):
+
+            adjustment_index = 4
+            adjust_path_at_ending_point = len(rail_path) > adjustment_index
+            for i in range((len(rail_path)-adjustment_index) if adjust_path_at_ending_point else (len(rail_path)-1)):
                 # section nodes
-                cur_start = rough_path[i]
-                cur_exit = rough_path[i+1]
-                past_start = rough_path[i-1] if i > 0 else cur_start
-                next_exit = rough_path[i+2] if (i+2) < len(rough_path) else cur_exit
+                cur_start = rail_path[i]
+                cur_exit = rail_path[i+1]
+                past_start = rail_path[i-1] if i > 0 else cur_start
+                next_exit = rail_path[i+2] if (i+2) < len(rail_path) else cur_exit
 
                 # section direction
                 start_dir = (cur_exit - past_start) / 3
                 end_dir = (next_exit - cur_start) / 3
 
                 path.extend(hermit_curve(cur_start, start_dir, cur_exit, end_dir)[1:])
-                # self.add_edge(cur_start, cur_exit)
+            # from matplotlib import pyplot as plt
+            # plt.scatter(*np.where(self.network > 0))
+            # plt.plot([p.x for p in path], [p.z for p in path])
 
+            if adjust_path_at_ending_point:
+                adjust_point = rail_path[-adjustment_index]
+                adjust_length = manhattan2d(adjust_point, ending_point)
+
+                ending_dir: Point = -self.get_rail_direction(ending_point).value
+                ending_dir = ending_dir / ending_dir.norm * adjust_length
+
+                adjust_dir = adjust_point - rail_path[-adjustment_index - 1]
+                adjust_dir = adjust_dir / adjust_dir.norm * adjust_length / 3
+                adjusted_curve = hermit_curve(adjust_point, adjust_dir, ending_point, ending_dir)[1:]
+                # plt.plot([p.x for p in adjusted_curve], [p.z for p in adjusted_curve])
+                path.extend(adjusted_curve)
+
+            # plt.show()
         return super().create_road(path=path)
 
     def connect_to_network(self, target: Position, margin: int = 0) -> List[Set[Point]]:
@@ -166,12 +179,15 @@ class RailRoadGraph(GridGraph):
     def getNeighbours(self, node, **kwargs):
         def prev_angle(dx, dz):
             if dx == 0 and dz == 0:
-                return RailNetwork().get_rail_direction(node)
-            atan = math.atan(dz / dx) if dx else math.pi / 2
-            if dx >= 0:
-                return atan
-            else:
-                return atan + math.pi
+                start_dir = RailNetwork().get_rail_direction(node)
+                return {
+                    Direction.East: 0,
+                    Direction.South: math.pi / 2,
+                    Direction.West: math.pi,
+                    Direction.North: -math.pi / 2
+                }[start_dir]
+
+            return math.atan2(dz, dx)
         root = kwargs.get("parent")
         prev_section: Point = node - root
         prev_direction = prev_angle(*prev_section.xz)

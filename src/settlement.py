@@ -121,7 +121,7 @@ class Settlement:
             # extend expendables parcels from smaller to larger while there still are some
             parcel = expendable_parcels.pop(0)
             if (parcel.entry_point - parcel.center).xz != (0, 0):
-                road_dir = Direction.of(*(parcel.entry_point - parcel.center).xyz)
+                road_dir = Direction.of(*(parcel.entry_point - parcel.center).withCoords(y=0).xyz)
                 lateral_dir = road_dir.rotate() if bernouilli() else -road_dir.rotate()
 
                 priority_directions = [road_dir, lateral_dir, -lateral_dir, -road_dir]
@@ -169,7 +169,7 @@ class Settlement:
                 corner2 = corner1 + Point(parcel.width, parcel.length) - Point(1, 1)
                 return corner1 in self._maps.area and corner2 in self._maps.area
 
-            if not in_bounds():
+            if not in_bounds() or parcel.generator is None:
                 continue
             try:
                 logging.info(f"Generating {str(parcel)}")
@@ -317,7 +317,7 @@ class Settlement:
             station_dir: Direction = TrainStation.compute_direction(station, network_graph.getNeighbours(station))
             station = station.withCoords(y=self._maps.height_map[station.xz])
             self._maps.rail_network.add_station(station, station_dir)
-            # self._road_network.connect_to_network(station, 5)  # todo: uncomment
+            self._road_network.connect_to_network(station, 5)
 
         for station, neighbour in rail_sections:
             self._maps.rail_network.add_edge(station.asPosition, neighbour.asPosition)

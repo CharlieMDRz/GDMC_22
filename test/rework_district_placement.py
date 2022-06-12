@@ -108,7 +108,7 @@ for _ in range(1):
     
 # %%
 n_size = 7
-interest_array: np.ndarray  # todo: define this arrayin the terminal
+interest_array: np.ndarray  # todo: define this array in the terminal
 
 values = interest_array.flatten()
 values = values[values > -1]

@@ -253,7 +253,6 @@ class CropGenerator(MaskedGenerator):
     def _gen_animal_farm(self, height_map, palette, animal=None, entities=None):
         # type: (TerrainMaps, array, HousePalette, str) -> None
         # todo: add torches to surround the gate
-        # todo: clean terrain within fences
         from terrain.entity_manager import EntityManager
         entities: EntityManager
         self.refine_mask()
@@ -277,24 +276,23 @@ class CropGenerator(MaskedGenerator):
                 continue
             if self.is_lateral(ax, az):
                 box = BoundingBox((ax, y + 1, az), (1, height_map_max[x, z] - y + 1, 1))
-                AREA_STRUCTURE.fill(box, fence_block, 2)
+                AREA_STRUCTURE.fill(box, fence_block, 4)
                 new_gate_pos = Point(ax, az, y+1)
                 new_gate_dist = euclidean(Position(ax, az, y+1, True), self._entry_point)
                 if (gate_pos is None or new_gate_dist < gate_dist) and not self.is_corner(new_gate_pos) and box.height == 1:
                     gate_pos, gate_dist = new_gate_pos, new_gate_dist
-                    door_dir_vec = self._entry_point - self.mean
-                    door_dir: Direction = Direction.of(dx=door_dir_vec.x, dz=door_dir_vec.z)
-                    for direction in Direction.cardinal_directions(False):
-                        if not self.is_masked(gate_pos + direction.value, absolute_coords=True):
-                            door_dir = direction
-                            break
-                    gate_block = BlockAPI.getFence(palette['door'], facing=str(door_dir).lower())
 
         if gate_pos:
-            AREA_STRUCTURE.set(gate_pos, gate_block, 3)
-            for dir in (door_dir.rotate(), -door_dir.rotate()):  # type: Direction
-                if direct_interface.getBlock(dir.x, dir.y, dir.z).endswith(fence_block):
-                    place_torch(dir.x, dir.y + 1, dir.z)
+            for direction in Direction.cardinal_directions(False):
+                if not self.is_masked(gate_pos + direction.value, absolute_coords=True):
+                    door_dir = direction
+                    gate_block = BlockAPI.getFence(palette['door'], facing=str(door_dir).lower())
+                    AREA_STRUCTURE.set(gate_pos, gate_block, 5)
+                    for dir in (door_dir.rotate(), -door_dir.rotate()):  # type: Direction
+                        torch_pos: Point = (gate_pos + dir.value)
+                        y = height_map_max[torch_pos.x - self.origin.x, torch_pos.z - self.origin.z]
+                        place_torch(torch_pos.x, y + 2, torch_pos.z)
+                    break
 
         # place animals
         animal_count = sum(self._mask.flat) // SURFACE_PER_ANIMAL
@@ -336,7 +334,6 @@ class CropGenerator(MaskedGenerator):
         self._irrigate_field(height, 4)
 
     def _gen_harvested_crop(self, height_map, palette=None):
-        # TODO: fix water sources
         mx, mz = random.randint(0, 1), random.randint(0, 2)
         for x, y, z in self.surface_pos(height_map):
             if (x % 2 == mx and (z + x // 2) % 3 == mz) and bernouilli():

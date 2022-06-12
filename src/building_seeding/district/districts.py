@@ -4,16 +4,34 @@ from typing import Dict
 
 import numba
 import numpy as np
-from matplotlib import pyplot as plt
 from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_score
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.preprocessing import StandardScaler
 
-from building_seeding.settlement import DistrictCluster, Town
+from building_seeding.district import build_kmeans_district
+from building_seeding.district.district_builders import DistrictCluster
+from building_seeding.settlement import Town
 from terrain import TerrainMaps
-from utils import Point, BuildArea, bernouilli, euclidean, X_ARRAY, Z_ARRAY, Position, PointArray
-from utils.misc_objects_functions import argmax, argmin, in_limits, Singleton
+from utils import Point, BuildArea, bernouilli, X_ARRAY, Z_ARRAY, PointArray
+from utils.misc_objects_functions import in_limits, Singleton
+
+
+class DistrictSeeder:
+    """
+    Seeds positions for new parcels in this district
+    """
+    def __init__(self, district_center, sigma_x, sigma_z):
+        self.__center = district_center
+        self.n_parcels = 0
+        self.stdev_x = sigma_x
+        self.stdev_z = sigma_z
+
+    def seed(self):
+        """
+        :return: (Point) position for a new parcel
+        """
+        x = random.normalvariate(self.__center.x, self.stdev_x)
+        z = random.normalvariate(self.__center.z, self.stdev_z)
+        return Point(int(round(x)), int(round(z)))
 
 
 class Districts(PointArray):
@@ -27,138 +45,39 @@ class Districts(PointArray):
     ~2/3 = outskirts
     more = countryside
     """
+    district_clusters: Dict[int, DistrictCluster]
+    district_seeders: Dict[int, DistrictSeeder]
+
     def __new__(cls, area: BuildArea):
         obj = super().__new__(cls, np.ones((area.width, area.length)))
-        obj.keep_rate: float  # fraction of positions used in the clustering
-        obj.__scaler = StandardScaler()
-        obj.__coord_scale = 1
-        obj.district_map: PointArray
-        obj.seeders: Dict[int, DistrictSeeder] = {}
+        obj.seeders = {}
         obj.name_gen = CityNameGenerator()
         obj.town_indexes = []  # indexes of built districts
         obj.towns = {}
-        obj.districtClusters: Dict[int, DistrictCluster] = {}
+        obj.district_clusters = {}
 
         return obj
 
     def build(self, maps: TerrainMaps, **kwargs):
-        visualize = kwargs.get("visualize", False)
-        X, Xu = self.__build_data(maps)
-        cluster_approx = np.sqrt(self.width * self.length) // 50
-        print("cluster approx", cluster_approx)
-        min_clusters = int(cluster_approx / 2)
-        max_clusters = int(np.ceil(cluster_approx * 1.3))
-        if max_clusters < 2:
-            kwargs["n_clusters"] = 1
-        print(f"there'll be between {min_clusters} and {max_clusters} districts")
-        min_clusters = max(2, min_clusters)
+        interest, X, model, clusters = build_kmeans_district(maps, **kwargs)
+        self.district_clusters = clusters
 
-        if max_clusters - min_clusters < 8:
-            possible_k = range(min_clusters, max_clusters + 1)
-        else:
-            gamma = (max_clusters / min_clusters) ** (1/8)
-            possible_k = {int(round(min_clusters * (gamma**k))) for k in range(8)}
-
-        def select_best_model():
-            if kwargs.get("n_clusters", 0):
-                return self.__kmeans(X, kwargs.get("n_clusters"), visualize)
-
-            models, scores = [], []
-            for n_clusters in possible_k:
-                model: KMeans = self.__kmeans(X, n_clusters, visualize)
-                models.append(model)
-                if X.shape[0] < 10000:
-                    scores.append(silhouette_score(X, model.labels_))
-                else:
-                    sample = np.random.randint(X.shape[0], size=10000)
-                    scores.append(silhouette_score(X[sample, :], model.labels_[sample]))
-                print("silhouette", scores[-1])
-                if len(scores) >= 2 and scores[-1] / scores[-2] < .98:
-                    break
-
-            if visualize:
-                plt.plot(possible_k, scores)
-                plt.title("Silhouette score as a function of n_clusters")
-                plt.show()
-
-            index = argmax(range(len(models)), key=lambda i: scores[i])
-            return models[index]
-
-        model = select_best_model()
-        labels = set(model.labels_)
-        self.districtClusters: Dict[int, DistrictCluster] = {label: DistrictCluster(label) for label in labels}
-
-        # cluster means
-        means = self.__scaler.inverse_transform(model.cluster_centers_ / self.__coord_scale)
-        means = [Position(_[0], _[1]) for _ in means]
-
-        dc: DistrictCluster
-        for label in labels:
-            dc = self.districtClusters[label]
-            cluster_matrix = Xu[model.labels_ == label]
-
-            dc.score = 1  # cluster_matrix[:, 2].mean()
-            dc.reps = {Position(*cluster_matrix[_, :2]) for _ in range(cluster_matrix.shape[0])}
-            dc.size = int(len(dc.reps) / self.keep_rate)
-            dc.center = argmin(dc.reps, lambda pos: euclidean(pos, means[label]))
-        del dc
-
-        surface_to_build = (X.shape[0] * .7) / self.keep_rate
+        surface_to_build = (interest > 0).sum() * .7
         surface_built = 0
-        best_suitability = max({_.score for _ in self.districtClusters.values()})
-        for dc2 in sorted(self.districtClusters.values(), key=lambda _: _.score, reverse=True):
-            label = dc2.id
+        for district_cluster in sorted(self.district_clusters.values(), key=lambda _: _.size, reverse=True):
+            label = district_cluster.id
             self.town_indexes.append(label)
-            self.towns[label] = Town.fromCluster(dc2, maps)
+            self.towns[label] = Town.fromCluster(district_cluster, maps)
             self.seeders[label] = DistrictSeeder(
-                dc2.center,
-                Xu[:, 0][model.labels_ == label].std(),
-                Xu[:, 1][model.labels_ == label].std()
+                district_cluster.center,
+                np.std([p.x for p in district_cluster.reps]),
+                np.std([p.z for p in district_cluster.reps])
             )
-            surface_built += dc2.size
-            if surface_built >= surface_to_build or dc2.score < best_suitability / 2:
+            surface_built += district_cluster.size
+            if surface_built >= surface_to_build:
                 break
 
-        self.__build_cluster_map(model, Xu)
-
-    def __build_data(self, maps: TerrainMaps):
-        """
-        Builds a dataset to perform cluster analysis in order to find suitable positions to build villages
-        """
-        from building_seeding.interest.interest import InterestMap
-        from building_seeding import BuildingType
-
-        DOWN_SIZE = 4
-        house_interest = InterestMap(BuildingType.house, "Flat_scenario", maps, None)
-        score_matrix: np.ndarray = house_interest.terrain_interest[::DOWN_SIZE, ::DOWN_SIZE]  # downsized interest matrix
-
-        n_samples: int = min(1000, score_matrix.size)  # target number of samples
-        self.keep_rate = n_samples / score_matrix.size  # resulting portion of positions taken into account
-        threshold_score = np.quantile(score_matrix, 1 - self.keep_rate)  # min score of the top #n_samples scores
-        top_score_xz = np.where(score_matrix >= threshold_score)
-        samples = [(x * DOWN_SIZE, z * DOWN_SIZE) for x, z in zip(*top_score_xz)]
-
-        Xu = np.array(samples)
-        X = self.__scaler.fit_transform(Xu)
-        print(f"{X.shape[0]} samples to select districts")
-        return X, Xu
-
-    def __kmeans(self, X: np.ndarray, n_clusters, visualize=False, coord_scale=1.15):
-        print(f"Selecting {n_clusters} districts")
-        kmeans = KMeans(n_clusters=n_clusters, tol=1e-5).fit(X)
-        if visualize:
-            Xu = self.__scaler.inverse_transform(X)
-            x, y = Xu[:, 0], -Xu[:, 1]
-            color = ["#" + ''.join([random.choice("ABCDEF0123456789") for j in range(6)]) for i in range(len(kmeans.cluster_centers_))]
-            c = [color[cluster] for cluster in kmeans.labels_]
-            plt.scatter(x, y, c=c)
-            xc = self.__scaler.inverse_transform(kmeans.cluster_centers_)[:, 0]
-            yc = -self.__scaler.inverse_transform(kmeans.cluster_centers_)[:, 1]
-            plt.scatter(xc, yc, s=100, c='k', marker='+')
-            plt.title(f"{n_clusters} clusters - scaling factor: {coord_scale}")
-            plt.show()
-
-        return kmeans
+        self.__build_cluster_map(model, X)
 
     def __build_cluster_map(self, clusters: KMeans, samples: np.ndarray):
         town_indexes = self.town_indexes
@@ -200,47 +119,28 @@ class Districts(PointArray):
 
     @property
     def n_districts(self):
-        return len(self.districtClusters)
+        return len(self.district_clusters)
 
     @property
     def buildable_surface(self):
-        return sum(self.districtClusters[i].size for i in self.town_indexes)
+        return sum(self.district_clusters[i].size for i in self.town_indexes)
 
     @property
     def district_centers(self):
-        return [_.center for _ in self.districtClusters.values()]
+        return [_.center for _ in self.district_clusters.values()]
 
     def seed(self):
         """
         Returns a random position suitable for building
         """
         town_centers = list(self.town_indexes)
-        town_cluster_probs = [self.districtClusters[i].size for i in town_centers]
+        town_cluster_probs = [self.district_clusters[i].size for i in town_centers]
         town_cluster_probs = np.array(town_cluster_probs) / sum(town_cluster_probs)
         while True:
             seed_cluster = np.random.choice(town_centers, p=town_cluster_probs)
             seed: Point = self.seeders[seed_cluster].seed()
             if in_limits(seed.xyz, self.width, self.length):
                 return seed
-
-
-class DistrictSeeder:
-    """
-    Seeds positions for new parcels in this district
-    """
-    def __init__(self, district_center, sigma_x, sigma_z):
-        self.__center = district_center
-        self.n_parcels = 0
-        self.stdev_x = sigma_x
-        self.stdev_z = sigma_z
-
-    def seed(self):
-        """
-        :return: (Point) position for a new parcel
-        """
-        x = random.normalvariate(self.__center.x, self.stdev_x)
-        z = random.normalvariate(self.__center.z, self.stdev_z)
-        return Point(int(round(x)), int(round(z)))
 
 
 class CityNameGenerator(metaclass=Singleton):

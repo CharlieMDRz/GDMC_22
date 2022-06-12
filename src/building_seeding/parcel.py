@@ -144,6 +144,8 @@ class Parcel(TransformBox):
 
     @property
     def generator(self):
+        if self.building_type.value is None:
+            return None
         return self.building_type.value(self.box, entry_point=self._entry_point, mask=self.mask)
 
     @property

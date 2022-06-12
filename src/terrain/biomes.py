@@ -129,7 +129,6 @@ class BiomeMap(PointArray):
         return BiomeMap.__biome_to_id[biome_type]
 
     def temperature(self, point: Position) -> float:
-        # todo: build temperature map maybe ?
         biome_name = self.getBiome(self[point.xz])
         biome = Biomes.from_name(biome_name)
         return biome.temperature

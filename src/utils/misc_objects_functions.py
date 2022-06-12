@@ -58,7 +58,7 @@ def argmin(values, key=None):
     if not values:
         return None
     if key is None:
-        return index_argmin(numba_list(values))
+        return index_argmin(values)
 
     def rec_argmin(sub_values):
         if len(sub_values) == 1:
