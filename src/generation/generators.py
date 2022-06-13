@@ -241,7 +241,7 @@ class CropGenerator(MaskedGenerator):
             self._sub_generator_function = self._gen_animal_farm
 
     def generate(self, level, height_map=None, palette=None):
-        if self._mask.sum() < 25:
+        if self._mask.sum() < 16:
             logging.info(f"Parcel ({self.width}, {self.length}) at {self.mean} too small to generate a crop")
             return
         self._clear_trees(level)
@@ -265,7 +265,7 @@ class CropGenerator(MaskedGenerator):
         print(f"Animal farm of type {animal}")
         fence_box = TransformBox(self.origin, (self.width, 1, self.length)).expand(-1, 0, -1)
         fence_block = BlockAPI.getFence(palette['door'])
-        gate_pos, gate_dist, gate_block = None, 0, None
+        gate_pos, gate_dist = None, 0
 
         height_map_max = ndimage.maximum_filter(height_map, size=3)
 

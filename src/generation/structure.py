@@ -73,5 +73,8 @@ class Structure(BoundingBox):
     def dump(self):
         self.interface.sendBlocks()
 
+    def reset(self):
+        self.__priority[:] = 0
+
 
 AREA_STRUCTURE: Structure = Structure((BuildArea().x, 0, BuildArea().z), (BuildArea().width, 256, BuildArea().length))

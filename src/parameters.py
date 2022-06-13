@@ -2,7 +2,7 @@
 MAX_DISTRICT_COUNT_OPTIONS = 8
 
 # Road network
-MAX_LAMBDA = 15
+MAX_LAMBDA = 40
 MAX_ROAD_WIDTH = 5
 MIN_ROAD_WIDTH = 3
 DIST_BETWEEN_NODES = 12
@@ -19,7 +19,7 @@ PARCEL_REUSE_ADVANTAGE = 2.5  # interest multiplying cost when evaluating a parc
 MAX_POND_EXPLORATION = 144  # should ideally be higher than the largest ponds to exterminate all of them
 
 # Path finding costs parameters
-BRIDGE_COST = 100
+BRIDGE_COST = 20
 BRIDGE_UNIT_COST = 5
 RAIL_ROAD_SPACING = 6
 RAIL_ROAD_PENALTY = 7

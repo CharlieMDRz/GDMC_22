@@ -1,19 +1,16 @@
-import random
 from collections import Counter
-from typing import List
 
 from building_seeding.district.district_builders import DistrictCluster
-from generation import HousePalette
-from parameters import PALETTE_MUTATION_PROBABILITY
+from generation.building_palette import HousePaletteGenerator
 from terrain import TerrainMaps
-from utils import Position, bernouilli
+from utils import Position
 
 
 class Town:
     def __init__(self, center: Position, name: str, palette):
         self.__name: str = name
         self.__center: Position = center
-        self.__palettes: List[HousePalette] = [palette]
+        self.__palettes: HousePaletteGenerator = palette
 
     @classmethod
     def fromCluster(cls, dc: DistrictCluster, terrain: TerrainMaps):
@@ -34,11 +31,7 @@ class Town:
 
     @property
     def palette(self):
-        palette = random.choice(self.__palettes)
-        if bernouilli(PALETTE_MUTATION_PROBABILITY):
-            palette = HousePalette.mutant(palette)
-            self.__palettes.append(palette)
-        return palette
+        return self.__palettes()
 
     @property
     def name(self):

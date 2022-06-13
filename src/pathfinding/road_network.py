@@ -394,7 +394,7 @@ def road_build_cost(src_point, dest_point):
         steepness: Point = (hm.steepness(src_point, norm=False) + hm.steepness(dest_point, norm=False)) / 2
         elevation = abs(steepness.dot(direction))
         elevation += abs(steepness.dot(Point(-direction.z, direction.x))) / 3
-        cost += scale * (1 + elevation) * 2  # linear cost over slopes
+        cost += scale * (1 + elevation) ** 2  # linear cost over slopes
 
         # discount to get roads closer to water
         src_water = network.terrain.fluid_map.water_distance(src_point)

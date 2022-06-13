@@ -7,7 +7,7 @@ import numpy as np
 from gdpc import lookup
 
 from parameters import RAIL_ROAD_SPACING, RAIL_ROAD_PENALTY
-from utils import Position, Point, manhattan, euclidean, Direction, argmin, Singleton, intersect, manhattan2d
+from utils import Position, Point, manhattan, euclidean, Direction, argmin, Singleton, intersect, manhattan2d, pos_bound
 from utils.algorithms.graphs import GridGraph
 from .path_finder import PathFinder
 from .railroad_generator import RailRoadGenerator
@@ -31,6 +31,7 @@ class RailNetwork(RoadNetwork, metaclass=Singleton):
         self.__limits = (width, length)
         self.__stations: Dict[Tuple[int, int], TrainStation] = {}
         self.__railPathFinder = PathFinder(7, RailRoadGraph(7, 15, cost=rail_road_build_cost), GridGraph(True, step=7, cost=high_penalty_on_slopes))
+        self.track_obstacle = np.zeros((width, length))
 
     def add_station(self, position: Position, orientation: Direction):
         train_station: TrainStation = TrainStation(position, orientation)
@@ -105,9 +106,9 @@ class RailNetwork(RoadNetwork, metaclass=Singleton):
                 end_dir = (next_exit - cur_start) / 3
 
                 path.extend(hermit_curve(cur_start, start_dir, cur_exit, end_dir)[1:])
-            # from matplotlib import pyplot as plt
-            # plt.scatter(*np.where(self.network > 0))
-            # plt.plot([p.x for p in path], [p.z for p in path])
+            from matplotlib import pyplot as plt
+            plt.scatter(*np.where(self.network > 0))
+            plt.plot([p.x for p in path], [p.z for p in path])
 
             if adjust_path_at_ending_point:
                 adjust_point = rail_path[-adjustment_index]
@@ -119,10 +120,18 @@ class RailNetwork(RoadNetwork, metaclass=Singleton):
                 adjust_dir = adjust_point - rail_path[-adjustment_index - 1]
                 adjust_dir = adjust_dir / adjust_dir.norm * adjust_length / 3
                 adjusted_curve = hermit_curve(adjust_point, adjust_dir, ending_point, ending_dir)[1:]
-                # plt.plot([p.x for p in adjusted_curve], [p.z for p in adjusted_curve])
+                plt.plot([p.x for p in adjusted_curve], [p.z for p in adjusted_curve])
                 path.extend(adjusted_curve)
 
-            # plt.show()
+            plt.savefig('_'.join(map(str, [root_point.x, root_point.z, ending_point.x, ending_point.z])) + '.png', dpi=300)
+
+            # if manhattan(root_point, ending_point) > TrainStation.PLATFORM_LENGTH:
+            if True:
+                for track_pos in path:
+                    x0, x1 = pos_bound(track_pos.x - 3), pos_bound(track_pos.x + 4, self.length)
+                    z0, z1 = pos_bound(track_pos.z - 3), pos_bound(track_pos.z + 4, self.length)
+                    self.track_obstacle[x0:x1, z0:z1] = 1
+
         return super().create_road(path=path)
 
     def connect_to_network(self, target: Position, margin: int = 0) -> List[Set[Point]]:
@@ -214,6 +223,10 @@ class RailRoadGraph(GridGraph):
 def rail_road_build_cost(src_point: Position, dst_point: Position):
     scale = manhattan(src_point, dst_point)
     cost = road_build_cost(src_point, dst_point)
+
+    rail_net: RailNetwork = RailNetwork()
+    if rail_net.track_obstacle[dst_point.xz] > 0:
+        return MAX_INT
 
     if cost <= MAX_INT:
         road_net: RoadNetwork = RoadNetwork()

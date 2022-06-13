@@ -1,3 +1,5 @@
+import multiprocessing as mp
+import time
 from typing import Callable, List
 
 from sortedcontainers import SortedList
@@ -53,10 +55,14 @@ class AStar:
         neighbours: SortedList = SortedList([source], lambda pos: self.__heuristic(pos))
         heuristic_step = 0
 
-        while neighbours:
+        p = mp.Process(target=time.sleep, args=(20,))
+        p.start()  # time out
+
+        while neighbours and p.is_alive():
             node = neighbours.pop(0)
 
             if node == target:
+                p.terminate()
                 return self.__predecessor.getPathTowards(target)
             elif self.__heuristic_index(node) < heuristic_step:
                 continue
@@ -80,6 +86,7 @@ class AStar:
                     self.__predecessor.addEdge(node, neigh, edge_dist)
                     neighbours.add(neigh)
 
+        print("A* timed out before reaching destination")
         return []
 
     def __heuristic_index(self, node) -> int:
@@ -92,7 +99,7 @@ class AStar:
     def __heuristic(self, pos) -> float:
         cost_to_pos = self.__predecessor[pos]
         pos_step = self.__heuristic_index(pos)
-        cost_from_pos = self._heuristic_dist(pos, self._itinerary[pos_step]) + self.__heuristic_list[pos_step]
+        cost_from_pos = self._graph[pos, self._itinerary[pos_step]] + self.__heuristic_list[pos_step]
         return cost_to_pos + cost_from_pos
 
     def __init_heuristic_list(self):

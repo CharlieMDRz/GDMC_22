@@ -1,4 +1,5 @@
 import logging
+import time
 
 from gdpc import worldLoader
 
@@ -89,6 +90,8 @@ class TerrainMaps:
         for x, y, z in AREA_STRUCTURE.altered_positions:
             pos: Position = Position(x, z, y)
             AREA_STRUCTURE.set(pos, self.level.getBlockAt(*pos.abs_xyz), 100000)
+
+        time.sleep(1)
         dump()  # finalize reset
 
         self.entities.reset()

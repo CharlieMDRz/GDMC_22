@@ -35,7 +35,7 @@ class BuildingPool:
 
     def __init_building_count(self, exploitable_surface):
         average_parcel_surface = AVERAGE_PARCEL_SIZE**2
-        self._buildings_max = int((exploitable_surface / average_parcel_surface) ** .85)
+        self._buildings_max = int((exploitable_surface / average_parcel_surface))
         self._buildings_max = max(self._buildings_max, 1)
         # self._buildings_max = min(self._buildings_max, 50)
         # self.settlement_limit = geometric(1 / average_parcel_count)  # yielded values too high

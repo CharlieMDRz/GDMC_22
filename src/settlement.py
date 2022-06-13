@@ -105,11 +105,11 @@ class Settlement:
         """
         logging.info("Extending parcels")
         from terrain import ObstacleMap
+        ObstacleMap()[:] = 0
         ObstacleMap().add_obstacle(Point(0, 0), self._road_network.obstacle)
         ObstacleMap().add_obstacle(Point(0, 0), self._maps.fluid_map.as_obstacle_array)
         ObstacleMap().add_obstacle(Point(0, 0), self._maps.rail_network.obstacle)
         for parcel in self._parcels:
-            ObstacleMap().hide_obstacle(*parcel.obstacle(forget=True), False)
             if isinstance(parcel, MaskedParcel):
                 trunk_obstacle = ObstacleMap()[parcel.minx: parcel.maxx, parcel.minz: parcel.maxz]
                 parcel.add_mask(trunk_obstacle == 0)

@@ -288,6 +288,8 @@ class BlockAPI:
         FrostedIce = "frosted_ice"
         Furnace = "furnace"
         GildedBlackstone = "gilded_blackstone"
+        Glass = 'glass'
+        GlassPane = 'glass_pane'
         Glowstone = "glowstone"
         GoldBlock = "gold_block"
         GoldOre = "gold_ore"

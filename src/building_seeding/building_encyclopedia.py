@@ -64,7 +64,7 @@ BUILDING_ENCYCLOPEDIA = {
         "Density": {
             "house": (-1, 1, 3),
             "crop": (.5, 2, 4),
-            'station': (.5, 1, 1.5),
+            'station': (.5, .8, 1.1),
             "windmill": (1, 2, 4),
             "wood_tower": (0, 0.35, 1.2),
             "stone_tower": (-1, 0.2, 1),
@@ -111,7 +111,7 @@ BUILDING_ENCYCLOPEDIA = {
             "stone_tower": (6, 10)
         },
 
-        "Temperature": {"default": (0.3, 0.8, 1.2)},
+        "Temperature": {"default": (0, 1, 2)},  # biome temperatures spread between 0 and 2
 
         "TreeDistance": {"default": (4, 8, 16)},
 

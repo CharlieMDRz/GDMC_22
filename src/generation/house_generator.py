@@ -432,6 +432,7 @@ class _WallSymbol(Generator):
 
 class _BaseSymbol(Generator):
     def generate(self, level, height_map=None, palette=None):
+        AREA_STRUCTURE.fill(self._box.split(dy=-1)[1], palette['floor'], 15)
         AREA_STRUCTURE.fill(self._box, palette['base'], 15)
 
 
