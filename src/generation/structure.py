@@ -62,6 +62,11 @@ class Structure(BoundingBox):
             p = Point(x, z, y)
             self.set(p, blockstate, priority, force, **kwargs)
 
+    def __getitem__(self, item):
+        if isinstance(item, Position):
+            return self.__priority[item.xyz]
+        raise ValueError()
+
     @property
     def altered_positions(self):
         return zip(*np.where(self.__priority > 0))

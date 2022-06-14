@@ -4,6 +4,7 @@ from typing import Union
 from gdpc import worldLoader
 
 from generation.generators import *
+from generation.room_furnisher import RoomFurnisher
 from generation.structure import AREA_STRUCTURE
 from utils import bernouilli, Direction
 
@@ -26,6 +27,7 @@ class ProcHouseGenerator(MaskedGenerator):
             main_room: _RoomSymbol = self.children[0]
             main_room.generate_door(self.entry_direction, self._entry_point.abs_x, self._entry_point.abs_z, level, palette)
             self._generate_stairs(level.level, palette)
+            self.furnish(main_room)
 
     def _clear_trees(self, level):
         for gen in filter(lambda g: isinstance(g, _RoomSymbol), self.children):
@@ -62,6 +64,12 @@ class ProcHouseGenerator(MaskedGenerator):
         elif isinstance(main_room[Direction.Top], _RoomSymbol):
             main_room.generate_ladder()
 
+    def furnish(self, main_room):
+        while isinstance(main_room, _RoomSymbol):
+            boxes = [main_room._box] + [room._box.expand(-dir) for dir, room in main_room._neighbors.items() if dir in Direction.cardinal_directions(False)]
+            RoomFurnisher(boxes).furnish()
+            main_room = main_room[Direction.Top]
+
 
 class _RoomSymbol(CardinalGenerator):
 
@@ -74,10 +82,9 @@ class _RoomSymbol(CardinalGenerator):
         if self._has_base:
             h = 1 if height_map is None else max(1, self.origin.y - height_map.min())
             self.children.append(_BaseSymbol(TransformBox(self.origin - (0, h, 0), (self.width, h, self.length))))
-        AREA_STRUCTURE.fill(self._get_box(), BlockAPI.blocks.Air, 5)
+        AREA_STRUCTURE.fill(self._get_box().expand(-1, 0, -1), BlockAPI.blocks.Air, 10)
         self._generate_pillars(level, palette)
         self._create_walls(level, palette)
-        self.__place_torch(level)
 
         prob = self._box.height / 4 - 1  # probability to build an upper floor
         upper_box = self._get_upper_box()

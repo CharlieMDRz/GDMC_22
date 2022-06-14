@@ -2,11 +2,10 @@ from enum import Enum
 from typing import Iterable, Tuple
 
 import numpy as np
+from gdpc import interface
 
-from gdpc.interface import requestBuildArea, setBuildArea
 from utils.misc_objects_functions import argmax, Singleton
 from utils.pymclevel.box import BoundingBox
-
 
 __all__ = [
     'absolute_distance',
@@ -347,10 +346,10 @@ class BuildArea(metaclass=Singleton):
         XFROM, XTO, ZFROM, ZTO = 0, 3, 2, 5
         if build_area_json is None:
             try:
-                build_area_json = list(requestBuildArea())
+                build_area_json = list(interface.requestBuildArea())
                 build_area_json[1] = 0
                 build_area_json[4] = 256
-                setBuildArea(*build_area_json)
+                interface.globalBuildArea = build_area_json
             except IOError:
                 print("Connection Error -> using empty BuildArea")
                 build_area_json = {XFROM: 0, XTO: 1, ZFROM: 0, ZTO: 1}

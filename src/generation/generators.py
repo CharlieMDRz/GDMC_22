@@ -12,11 +12,13 @@ from scipy import ndimage
 
 from generation.building_palette import HousePalette
 from generation.structure import AREA_STRUCTURE
+from parameters import ACTIVATED_WINDMILLS
 from utils import *
 from utils.block_utils import build_block_state
 from utils.nbt_structures import StructureNBT
 
 SURFACE_PER_ANIMAL = 16
+activated_windmills = ACTIVATED_WINDMILLS
 
 
 class Generator:
@@ -252,7 +254,6 @@ class CropGenerator(MaskedGenerator):
 
     def _gen_animal_farm(self, height_map, palette, animal=None, entities=None):
         # type: (TerrainMaps, array, HousePalette, str) -> None
-        # todo: add torches to surround the gate
         from terrain.entity_manager import EntityManager
         entities: EntityManager
         self.refine_mask()
@@ -494,7 +495,10 @@ class WindmillGenerator(Generator):
         windmill_nbt = StructureNBT('gdmc_windmill.nbt')
         windmill_nbt.build(*box.origin)
         # print(runCommand(f'setblock {x} {y+4} {z-1} minecraft:redstone_wall_torch[facing=north, lit=true]'))
-        direct_interface.runCommand(f'setblock {x} {y+4} {z-1} minecraft:redstone_wall_torch[facing=north, lit=true]')
+        global activated_windmills
+        if activated_windmills:
+            direct_interface.runCommand(f'setblock {x} {y+4} {z-1} minecraft:redstone_wall_torch[facing=north, lit=true]')
+            activated_windmills -= 1
 
 
 def place_street_lamp(x, y, z, material, h=0):

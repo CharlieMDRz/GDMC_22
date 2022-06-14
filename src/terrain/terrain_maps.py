@@ -1,7 +1,7 @@
 import logging
 import time
 
-from gdpc import worldLoader
+from gdpc import worldLoader, direct_interface
 
 from generation.structure import AREA_STRUCTURE
 import pathfinding
@@ -95,3 +95,4 @@ class TerrainMaps:
         dump()  # finalize reset
 
         self.entities.reset()
+        direct_interface.runCommand("kill @e[type=minecraft:item]")

@@ -26,7 +26,6 @@ def setBlock(point: Point, blockstate: str, buffer_size=1000):
 def dump():
     from generation.structure import AREA_STRUCTURE
     AREA_STRUCTURE.dump()  # clear buffer of preferred interface
-    direct_interface.runCommand("kill @e[type=minecraft:item]")
 
 
 def getBlockRelativeAt(world_slice: worldLoader.WorldSlice, x: int, y: int, z: int):

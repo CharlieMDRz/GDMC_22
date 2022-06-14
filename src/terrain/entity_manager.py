@@ -2,11 +2,11 @@ from typing import List, Dict
 
 from gdpc import worldLoader
 
-from utils import Position, euclidean, Point
+from utils import Position, euclidean, Point, Singleton
 from utils.entities import *
 
 
-class EntityManager:
+class EntityManager(metaclass=Singleton):
     WILD_ANIMALS = {'bat', 'bee', 'fox', 'llama', 'ocelot', 'panda', 'polar_bear', 'turtle'}
     FARMING_ANIMALS = {'chicken', 'cow', 'donkey', 'horse', 'mule', 'pig', 'sheep'}
     TAMED_ANIMALS = {'cat', 'parrot', 'rabbit', 'wolf'}

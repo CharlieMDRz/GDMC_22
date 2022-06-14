@@ -82,6 +82,17 @@ class Entity:
             cmd = f"kill @e[{str(self)}, limit=1, sort=nearest]"
             return direct_interface.runCommand(cmd)
 
+    @staticmethod
+    def get_orientation(direction):
+        return {
+            Direction.Bottom: 0,
+            Direction.Top: 1,
+            Direction.North: 2,
+            Direction.South: 3,
+            Direction.West: 4,
+            Direction.East: 5
+        }[direction]
+
     def reset(self) -> None:
         """
         Resets current entity to its initial state
@@ -110,17 +121,9 @@ def detect_entities(level: worldLoader.WorldSlice) -> List[Entity]:
 
 
 def get_item_frame_entity(item: str, facing: Direction = Direction.Top, invisible: bool = False, item_rotation: int = 0, **kwargs) -> Entity:
-    direction_to_facing_id = {
-        Direction.Bottom: 0,
-        Direction.Top: 1,
-        Direction.North: 2,
-        Direction.South: 3,
-        Direction.West: 4,
-        Direction.East: 5
-    }
 
     entity_args = {
-        "Facing": direction_to_facing_id[facing],
+        "Facing": Entity.get_orientation(facing),
         "Item": '{id:"' f'{item}' '", Count:1}',
         "Invisible": int(invisible),
         "ItemRotation": item_rotation
@@ -128,4 +131,5 @@ def get_item_frame_entity(item: str, facing: Direction = Direction.Top, invisibl
 
     kwargs.update(entity_args)
 
-    return Entity("item_frame", **kwargs)
+    from terrain import EntityManager
+    return EntityManager().get_entity("item_frame", **kwargs)
