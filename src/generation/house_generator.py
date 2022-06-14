@@ -495,7 +495,7 @@ class ProcHouseGeneratorBuilder:
             if a1z < rz:
                 a1l = rz - a1z + 1
             else:
-                a1l = a1z - rz - rl
+                a1l = a1z - rz - rl + 1
                 a1z = rz + rl - 1
             a1box = TransformBox(box.origin + (a1x, 1, a1z), (a1w, box.height - 2, a1l))
             main_room[Direction.of(dz=(a1z - rz))] = _RoomSymbol(a1box, has_base=True)
@@ -511,7 +511,7 @@ class ProcHouseGeneratorBuilder:
             if a2x < rx:
                 a2w = rx - a2x + 1
             else:
-                a2w = a2x - rx - rl
+                a2w = a2x - rx - rl + 1
                 a2x = rx + rw - 1
             a2box = TransformBox(box.origin + (a2x, 1, a2z), (a2w, box.height - 2, a2l))
             main_room[Direction.of(dx=(a2x - rx))] = _RoomSymbol(a2box, has_base=True)

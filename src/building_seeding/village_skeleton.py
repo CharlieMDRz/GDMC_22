@@ -2,6 +2,7 @@
 Village skeleton growth
 """
 import itertools
+import multiprocessing as mp
 import time
 from typing import List, Set, Dict, Tuple
 
@@ -77,11 +78,21 @@ class VillageSkeleton:
 
     def grow(self, time_limit: int, do_visu: bool):
         print("Seeding parcels")
+        if time_limit:
+            p = mp.Process(target=time.sleep, args=(time_limit,))
+            p.start()
+        else:
+            p = None
+
         map_plots = VisuHandler(do_visu, self.maps, self.__parcel_list)
         build_iter = self.building_iterator
 
         t0 = time.time()
         for building_type in build_iter:
+            if p is not None and not p.is_alive():
+                print(f"Reached time limit of {time_limit}s, timing-out generation !")
+                p.terminate()
+                break
 
             print(f"\nTrying to place {building_type.name} - #{build_iter.count} out of {build_iter.size}")
 

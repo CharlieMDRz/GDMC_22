@@ -1,7 +1,9 @@
+import os
 import random
 from itertools import product
 from typing import List
 
+import gdpc.toolbox
 import numpy as np
 from gdpc import lookup
 
@@ -12,6 +14,7 @@ from utils import Position, BlockAPI, Direction, bernouilli
 from utils.block_utils import build_block_state
 from utils.entities import get_item_frame_entity, Entity
 from utils.items import DISCS
+from utils.loot_table_sampler import LootTable
 
 wall_decorations = DISCS + [
     'clock', 'cod', 'salmon', 'book', 'pufferfish'
@@ -61,12 +64,25 @@ class BedPlacer(FurniturePlacer):
 
 
 class CardinalPlacer(FurniturePlacer):
-    BLOCKS = ['chest', 'furnace']
+    BLOCKS = ['furnace']
 
     def place(self, position: Position):
         direction = RoomLookAround.get_direction(position)
         block_state = build_block_state(self._block, force_properties=True, facing=direction.name.lower())
         AREA_STRUCTURE.set(position, block_state, RoomFurnisher.PRIORITY)
+        return [position]
+
+
+class ChestPlacer(CardinalPlacer):
+    def place(self, position: Position):
+        super().place(position)
+        AREA_STRUCTURE.dump()
+        loot_tables_dir = 'resources/data_1.16.5/loot_tables/chests/village'
+        loot_table_file_name = random.choice(os.listdir(loot_tables_dir))
+        loot_tables_path = os.path.join(loot_tables_dir, loot_table_file_name)
+        loot_table = LootTable.fromMCLootTable(loot_tables_path)
+        AREA_STRUCTURE.dump()
+        gdpc.toolbox.placeInventoryBlock(*position.abs_xyz, items=loot_table.sample(9, 3))
         return [position]
 
 
@@ -76,6 +92,8 @@ class FurniturePlacerFactory:
     def get_placer(block: str):
         if 'bed' in block:
             return BedPlacer(block)
+        if 'chest' in block:
+            return ChestPlacer(block)
         if any(_ in block for _ in CardinalPlacer.BLOCKS):
             return CardinalPlacer(block)
         return FurniturePlacer(block)

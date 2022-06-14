@@ -36,6 +36,7 @@ if __name__ == '__main__':
     if structure == 'windmill':
         generate_windmill(terrain)
     elif structure == 'train_station':
-        generate_train_station(terrain, Direction.East)
+        generate_train_station(terrain, Direction.South)
+        AREA_STRUCTURE.dump()
     if not input():
         terrain.undo()

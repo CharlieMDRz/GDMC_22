@@ -1,11 +1,13 @@
 from typing import Dict, List, Set
 
+import gdpc.lookup
 import numpy as np
 
 from generation import Generator
 from generation.structure import AREA_STRUCTURE
 from utils import Position, Direction, manhattan, getBlockRelativeAt, ground_blocks, euclidean, Point, BlockAPI, \
     place_torch, clear_tree_at, dump, TransformBox, BoundingBox, argmin, BuildArea
+from utils.loot_table_sampler import LootTable, LootTablePool
 from utils.nbt_structures import StructureNBT
 
 
@@ -323,12 +325,23 @@ class TrainStation(Generator):
         self.connectors.extend((conn1, conn2))
 
     def generate(self, level, height_map=None, palette=None):
+        station_chest = LootTable()
+        station_chest_pool = LootTablePool(5, 15)
+        station_chest.pools.append(station_chest_pool)
+
+        station_chest_pool.addEntry('minecart', weight=3)
+        station_chest_pool.addEntry('map', weight=1)
+
         if self.orientation in [Direction.North, Direction.South]:
             station_nbt = StructureNBT('west_train_station.nbt')
             station_nbt.build(*(self.position - Point(4, 5, 5)).abs_xyz)
+            chest_pos = self.position + (4, 2, 3)
+            gdpc.toolbox.placeInventoryBlock(*chest_pos.abs_xyz, items=station_chest.sample(9, 3))
         else:
             station_nbt = StructureNBT('north_train_station.nbt')
             station_nbt.build(*(self.position - Point(5, 4, 5)).abs_xyz)
+            chest_pos = self.position + (-4, 2, 4)
+            gdpc.toolbox.placeInventoryBlock(*chest_pos.abs_xyz, items=station_chest.sample(9, 3))
 
     @staticmethod
     def compute_direction(position: Point, neighbours: Set[Point]) -> Direction:

@@ -35,8 +35,8 @@ def get_possible_cluster_count(maps, **kwargs) -> List[int]:
         return [kwargs.get(N_CLUSTERS)]
 
     approx = np.sqrt(maps.width * maps.length) // 50
-    min_clusters = int(max(1, approx // 2))
-    max_clusters = int(approx * 1.3)
+    min_clusters = int(max(2, approx // 2))
+    max_clusters = int(max(min_clusters, approx * 1.3))
     logging.info(f"there'll be between {min_clusters} and {max_clusters} districts")
 
     if max_clusters - min_clusters < MAX_DISTRICT_COUNT_OPTIONS:

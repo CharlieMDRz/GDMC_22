@@ -7,13 +7,14 @@ import numpy as np
 
 from utils import BoundingBox, Position, Point
 from utils.block_utils import BuildArea
+from utils.interface_patch import InterfacePatch
 
 
 class Structure(BoundingBox):
     def __init__(self, origin, size):
         super().__init__(origin, size)
         self.__priority = np.zeros(size, dtype=np.int32)
-        self.interface: interface.Interface = interface.Interface(buffering=True, caching=True)
+        self.interface: interface.Interface = InterfacePatch(buffering=True, caching=True)
 
     @classmethod
     def from_box(cls, box: BoundingBox):

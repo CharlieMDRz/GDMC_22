@@ -34,7 +34,7 @@ from terrain import TerrainMaps, ObstacleMap
 from utils import log_exec_time
 
 
-def main(districts=None, seeding=None, parcels=None, generation=None, visualize=False, undo=False) -> None:
+def main(districts=None, seeding=None, parcels=None, generation=None, visualize=False, undo=False, time_limit: int = 0) -> None:
     print("Hello Settlers!")
     # get & parse building zone
     terrain: TerrainMaps = TerrainMaps.request()
@@ -52,7 +52,10 @@ def main(districts=None, seeding=None, parcels=None, generation=None, visualize=
 
         if seeding:
             # define buildings list and seed them
-            seeding(settlement, do_visu=visualize)
+            if time_limit:
+                seeding(settlement, time_limit=time_limit-(time.time()-t0), do_visu=visualize)
+            else:
+                seeding(settlement, do_visu=visualize)
         else: return
         settlement.clean_road_network()
 
@@ -174,20 +177,13 @@ if __name__ == '__main__':
 
         stats: Stats = cProfile.run(f"main(**gen_options)", sort=SortKey.CUMULATIVE)
 
-    elif args.time > 0 and not args.undo:
-        # run code with time limit
-        print(f"Running default mode... Will time-out after {args.time} seconds")
-        p = mp.Process(target=main, name="gdmc_run", kwargs=gen_options)
-        p.start()
-        p.join(args.time)
-
-        if p.is_alive():
-            print(f"Reached time limit of {args.time}s, timing-out generation !")
-            p.terminate()
-            p.join()
-
     else:
-        print("Running endless mode...")
+        if args.time > 0 and not args.undo:
+            # run code with time limit
+            print(f"Running default mode... Will time-out after {args.time} seconds")
+            gen_options['time_limit'] = args.time
+        else:
+            print("Running endless mode...")
         main(**gen_options)
 
     t1 = time.time_ns()
