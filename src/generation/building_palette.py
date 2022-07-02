@@ -102,32 +102,32 @@ class HousePaletteGenerator:
 
 class PaletteGenerators:
     PARIS = HousePaletteGenerator(
-        b.Stone, b.SprucePlanks, b.SmoothSandstone, b.BirchPlanks, b.WhiteStainedGlassPane, 'gable',
+        b.Stone, [b.SprucePlanks, b.CyanGlazedTerracotta], b.SmoothSandstone, b.BirchPlanks, b.WhiteStainedGlassPane, 'gable',
         [b.PolishedBlackstoneBrickStairs, b.BlackstoneStairs, b.PolishedBlackstoneStairs], 'birch', b.SmoothSandstone,
         b.ChiseledSandstone)
 
     LYON = HousePaletteGenerator(
-        b.Stone, b.OakPlanks, b.StrippedOakLog, [b.OrangeTerracotta, b.Terracotta, b.YellowTerracotta], b.GlassPane,
+        b.Stone, [b.OakPlanks, b.BrownGlazedTerracotta], b.StrippedOakLog, [b.OrangeTerracotta, b.Terracotta, b.YellowTerracotta], b.GlassPane,
         'gable', [b.PolishedGraniteStairs, b.GraniteStairs], 'oak', b.OakStairs)
 
     BORDEAUX = HousePaletteGenerator(
-        b.Stone, b.OakPlanks, [None, b.StrippedOakLog, b.CutSandstone], [b.OakPlanks, b.StrippedBirchLog], b.LightGrayStainedGlassPane,
+        b.Stone, [b.OakPlanks, b.BlueGlazedTerracotta], [None, b.StrippedOakLog, b.CutSandstone], [b.OakPlanks, b.StrippedBirchLog], b.LightGrayStainedGlassPane,
         'gable', [b.StoneBrickStairs, b.AndesiteStairs, b.PolishedAndesiteStairs], 'oak', b.OakStairs)
 
     MARSEILLE = HousePaletteGenerator(
-        b.Stone, b.CutSandstone, b.QuartzPillar, [b.BirchPlanks, b.StrippedBirchWood, b.StrippedJungleWood, b.YellowTerracotta], b.LightBlueStainedGlassPane,
+        b.Stone, [b.CutSandstone, b.WhiteGlazedTerracotta], b.QuartzPillar, [b.BirchPlanks, b.StrippedBirchWood, b.StrippedJungleWood, b.YellowTerracotta], b.LightBlueStainedGlassPane,
         'gable', [b.AcaciaStairs, b.BrickStairs], 'jungle', b.QuartzStairs)
 
     STRASBOURG = HousePaletteGenerator(
-        b.Stone, b.OakPlanks, b.SpruceLog, [b.WhiteConcrete, b.WhiteWool, b.Terracotta, b.SmoothSandstone], b.GlassPane,
+        b.Stone, [b.OakPlanks, b.BlackGlazedTerracotta], b.SpruceLog, [b.WhiteConcrete, b.WhiteWool, b.Terracotta, b.SmoothSandstone], b.GlassPane,
         'gable', [b.NetherBrickStairs, b.DarkOakStairs, b.SpruceStairs], 'oak', b.CrimsonStairs)
 
     LILLE = HousePaletteGenerator(
-        b.Stone, b.DarkOakPlanks, [b.StrippedJungleLog, b.StrippedOakLog], [b.AcaciaPlanks, b.StrippedAcaciaLog, b.Bricks, b.Terracotta], b.GrayStainedGlassPane,
+        b.Stone, [b.DarkOakPlanks, b.OrangeGlazedTerracotta], [b.StrippedJungleLog, b.StrippedOakLog], [b.AcaciaPlanks, b.StrippedAcaciaLog, b.Bricks, b.Terracotta], b.GrayStainedGlassPane,
         'gable', [b.CobblestoneStairs, b.MossyCobblestoneStairs, b.PolishedBlackstoneBrickStairs], 'acacia', b.SmoothSandstoneStairs)
 
     BAYONNE = HousePaletteGenerator(
-        b.Stone, b.DarkOakPlanks, [b.AcaciaPlanks, b.QuartzPillar, None], [b.WhiteTerracotta, b.LightGrayTerracotta], b.AcaciaFence,
+        b.Stone, [b.DarkOakPlanks, b.RedGlazedTerracotta], [b.AcaciaPlanks, b.QuartzPillar, None], [b.WhiteTerracotta, b.LightGrayTerracotta], b.AcaciaFence,
         'gable', [b.DarkPrismarineStairs, b.WarpedStairs], 'acacia', b.SmoothSandstoneStairs)
 
     BASIC_OAK = HousePaletteGenerator(

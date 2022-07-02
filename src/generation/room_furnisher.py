@@ -107,10 +107,13 @@ class RoomFurnisher:
         self.__floor_positions: List[Position] = self.detect_furnishable_floor(boxes)
         self.__wall_positions: List[Position] = self.detect_decorable_wall(self.__floor_positions)
         self.__surfaces: List[Position] = []
-        self.__furniture_list = ['bed', 'chest', BlockAPI.blocks.Furnace, BlockAPI.blocks.CraftingTable, BlockAPI.blocks.Bookshelf, BlockAPI.blocks.Jukebox]
+        self.__furniture_list = ['bed', BlockAPI.blocks.Furnace, BlockAPI.blocks.CraftingTable, BlockAPI.blocks.Jukebox] + ['chest'] * random.randint(1, 4) + [BlockAPI.blocks.Bookshelf] * random.randint(0, 4)
+        random.shuffle(self.__furniture_list)
 
     def furnish(self):
         for furniture_piece in self.__furniture_list:
+            if not self.__floor_positions:
+                break
             position = random.choice(self.__floor_positions)
             furnished_positions = FurniturePlacerFactory.get_placer(furniture_piece).place(position)
             if not any(_ in furniture_piece for _ in ('bed', 'chest')):

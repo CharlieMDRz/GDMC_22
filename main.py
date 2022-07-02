@@ -89,7 +89,7 @@ def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument("--steps", "-s", nargs='+', type=str, default=["D1", "S0", "G", "P"])
     parser.add_argument("--visualize", "-v", action="store_true", help="Export visualization maps during run")
-    parser.add_argument("--time", "-T", type=int, default=1200, help="Time limit in seconds for the whole run, negative value for no limit")
+    parser.add_argument("--time", "-T", type=int, default=900, help="Time limit in seconds for the whole run, negative value for no limit")
 
     run_modes = parser.add_mutually_exclusive_group()
     run_modes.add_argument("--undo", "-u", action="store_true", help="Undo generation after user input")

@@ -55,7 +55,7 @@ class AStar:
         neighbours: SortedList = SortedList([source], lambda pos: self.__heuristic(pos))
         heuristic_step = 0
 
-        p = mp.Process(target=time.sleep, args=(20,))
+        p = mp.Process(target=time.sleep, args=(30,))
         p.start()  # time out
 
         while neighbours and p.is_alive():
