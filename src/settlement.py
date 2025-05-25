@@ -73,6 +73,7 @@ class Settlement:
 
         max_road_count = max(1, min(self.limits.width, self.limits.length) // MEAN_ROAD_COVERED_SURFACE)
         road_count = min(np.random.geometric(1. / max_road_count), max_road_count * 3 // 2)
+        road_count = 0
         logging.debug('New settlement will have {} external connections B)'.format(road_count))
         out_connections = [Point(self.limits.width // 2, self.limits.length // 2)]
 

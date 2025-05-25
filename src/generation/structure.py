@@ -42,7 +42,7 @@ class Structure(BoundingBox):
             pos = Position(pos.x, pos.z, pos.y, True)
 
         if pos.abs_xyz not in self:
-            logging.debug(f"Trying to set block outside build area ! @{pos}")
+            logging.info(f"Trying to set block outside build area ! @{pos}")
             # traceback.print_stack()
             return
         prev_priority = self.__priority[pos.xyz]

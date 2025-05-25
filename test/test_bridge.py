@@ -1,14 +1,14 @@
 from __future__ import division
 
 from math import ceil, sqrt
-from random import randint, random
+from random import randint
 from typing import List
 
 from numpy.random import choice
 from utilityFunctions import raytrace
 
 from generation import Generator
-from generation.road_generator import Bridge
+from pathfinding.road_generator import Bridge
 from pymclevel import MCLevel, BoundingBox, MCInfdevOldLevel
 from pymclevel.block_fill import fillBlocks
 from terrain import HeightMap
@@ -169,7 +169,7 @@ class RampStairs(Generator):
                     return 1
                 else:
                     return (1 + abs(y-h)) ** 2
-            edge_points = raytrace(edge_begin.coords, edge_end.coords)
+            edge_points = raytrace(edge_begin.xyz, edge_end.xyz)
             v = sum(pos_cost(x, y, z) for x, y, z in edge_points)
             if str_beg not in self.__stored_edge_cost:
                 self.__stored_edge_cost[str_beg] = {}
@@ -225,8 +225,8 @@ class RampStairs(Generator):
 
         def close_to_exit(pos):
             # type: (Point3D) -> bool
-            ex, ey, ez = self.exit.coords
-            px, py, pz = pos.coords
+            ex, ey, ez = self.exit.xyz
+            px, py, pz = pos.xyz
             if ex != px and ez != pz:
                 # Not close enough
                 return False

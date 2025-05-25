@@ -25,7 +25,10 @@ def attraction_repulsion(d, lambda_min, lambda_0, lambda_max):
 
 @njit
 def balance(d, lambda_min, lambda_0, lambda_max):
-    if d < lambda_min or d > lambda_max:
+    if d == lambda_0:
+        return 1
+
+    elif d <= lambda_min or d >= lambda_max:
         res = -1
 
     else:

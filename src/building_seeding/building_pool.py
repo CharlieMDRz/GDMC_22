@@ -39,7 +39,7 @@ class BuildingPool:
         self._buildings_max = max(self._buildings_max, 1)
         # self._buildings_max = min(self._buildings_max, 50)
         # self.settlement_limit = geometric(1 / average_parcel_count)  # yielded values too high
-        logging.info('New BuildingPool will generate {} parcels'.format(self._buildings_max))
+        logging.info(f'New BuildingPool will generate {self._buildings_max} parcels over a surface {exploitable_surface} blocks')
 
     def __iter__(self):
         return self

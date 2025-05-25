@@ -139,8 +139,9 @@ class InterestMap:
         self.__lambdas = {c: (w[c][b] if b in w[c] else w[c]["default"]) for c in w if (b in w[c] or "default" in w[c])}
         self.__lambdas["Sociability"] = w["Sociability"]
         pm, p0, pM = self.__lambdas["Altitude"]
-        alt = terrain_maps.height_map.flatten()
+        alt = terrain_maps.height_map[terrain_maps.fluid_map.water == 0]
         self.__lambdas["Altitude"] = np.percentile(alt, pm), np.percentile(alt, p0), np.percentile(alt, pM)
+        print(f"Ideal building heights are between {self.__lambdas['Altitude']}")
 
         self.__acc_w = self.__lambdas["Weighting_factors"][0]
         self.__soc_w = self.__lambdas["Weighting_factors"][1]
@@ -219,7 +220,7 @@ class InterestMap:
         def altitude_interest(_x, _z):
             alt = maps.height_map[_x, _z]
             lm, l0, lM = self.__lambdas["Altitude"]
-            return balance(alt, lm, l0, lM)
+            return soft_balance(alt, lm, l0, lM)
 
         def steepness_interest(_x, _z):
             steep = maps.height_map.steepness(_x, _z)

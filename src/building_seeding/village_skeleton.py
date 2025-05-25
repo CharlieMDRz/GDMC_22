@@ -91,13 +91,12 @@ class VillageSkeleton:
         for building_type in build_iter:
             if p is not None and not p.is_alive():
                 print(f"Reached time limit of {time_limit}s, timing-out generation !")
-                p.terminate()
                 break
 
             print(f"\nTrying to place {building_type.name} - #{build_iter.count} out of {build_iter.size}")
 
             # Village Element Seeding Process
-            building_type = self.__interest.try_to_reuse_existing_parcel(building_type)
+            # building_type = self.__interest.try_to_reuse_existing_parcel(building_type)
             building_position = self.__interest.get_seed(building_type)
 
             if building_position is None:
@@ -115,6 +114,9 @@ class VillageSkeleton:
             if time_limit and time.time() - t0 >= time_limit:
                 print("Time limit reached: early stopping parcel seeding")
                 break
+
+        if p is not None:
+            p.terminate()
 
 
 class CityBlock(Bounds):

@@ -9,7 +9,7 @@ from .geometry_utils import Point, BuildArea, Position
 from .misc_objects_functions import Singleton
 from .pymclevel.box import BoundingBox
 
-interface.globalinterface.setBuffering(True)
+# interface.globalinterface.setBuffering(True)
 
 
 def setBlock(point: Point, blockstate: str, buffer_size=1000):
